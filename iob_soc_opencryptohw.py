@@ -5,10 +5,9 @@ import shutil
 
 from iob_soc import iob_soc
 from iob_module import iob_module
-#from iob_vexriscv import iob_vexriscv
-#from iob_uart import iob_uart
 
 from iob_versat import CreateVersatClass
+from iob_vexriscv import iob_vexriscv
 from iob_reset_sync import iob_reset_sync
 
 VERSAT_SPEC = "versatSpec.txt"
@@ -19,13 +18,8 @@ VERSAT_EXTRA_UNITS = os.path.realpath(
 
 print("IOB_SOC_VERSAT", file=sys.stderr)
 
-pc_emul = False
-for arg in sys.argv[1:]:
-    if arg == "PC_EMUL":
-        pc_emul = True
-
-class iob_soc_opencryptohw(iob_soc):
-    name = "iob_soc_opencryptohw"
+class iob_soc_versat(iob_soc):
+    name = "iob_soc_versat"
     version = "V0.70"
     flows = "pc-emul emb sim doc fpga"
     setup_dir = os.path.dirname(__file__)
@@ -47,7 +41,7 @@ class iob_soc_opencryptohw(iob_soc):
         cls.versat_type = CreateVersatClass(
             pc_emul,
             VERSAT_SPEC,
-            GetTestName(),
+            "CryptoAlgos",
             VERSAT_EXTRA_UNITS,
             cls.build_dir,
             os.path.realpath(cls.setup_dir + "../debug/"),
@@ -90,8 +84,6 @@ class iob_soc_opencryptohw(iob_soc):
             f"{cls.build_dir}/hardware/src",
             dirs_exist_ok=True,
         )
-
-        shutil.rmtree(f"{cls.build_dir}/software/src/Tests")
 
     @classmethod
     def _setup_confs(cls, extra_confs=[]):

@@ -1,9 +1,6 @@
-#ROOT_DIR=.
-#include $(ROOT_DIR)/config.mk
-
 CORE := iob_soc_opencryptolinux
 
-SIMULATOR ?= verilator
+SIMULATOR ?= icarus
 BOARD ?= AES-KU040-DB-G
 
 DISABLE_LINT:=1
@@ -23,6 +20,11 @@ endif
 setup:
 	make build-setup SETUP_ARGS="$(SETUP_ARGS)"
 
+sim-test-linux:
+	nix-shell --run "make clean"
+	nix-shell --run "make setup INIT_MEM=1"
+	nix-shell --run "make -C ../iob_soc_o* sim-run SIMULATOR=verilator RUN_LINUX=1"
+
 sim-test:
 	nix-shell --run "make clean"
 	nix-shell --run "make setup INIT_MEM=1"
@@ -30,6 +32,10 @@ sim-test:
 	nix-shell --run "make clean"
 	nix-shell --run "make setup INIT_MEM=0"
 	nix-shell --run "make -C ../iob_soc_o* sim-run SIMULATOR=verilator"
+
+sim-test-spi:
+	nix-shell --run "make -C submodules/SPI/ clean build-setup && make -C submodules/iob_spi_master_V0.10/ sim-run"
+	nix-shell --run "make -C submodules/SPI/ clean"
 
 fpga-run:
 	nix-shell --run 'make clean setup INIT_MEM=$(INIT_MEM) USE_EXTMEM=$(USE_EXTMEM)'
@@ -49,54 +55,15 @@ fpga-connect:
 fpga-test:
 	make clean setup fpga-run INIT_MEM=0
 
-#
-# FUSESOC TARGETS
-#
-FUSESOC_DIR=fusesoc
-fusesoc-setup:
-	make -C $(FUSESOC_DIR) setup ALGORITHM=$(ALGORITHM)
+test-all:
+	make sim-test
+	make fpga-test BOARD=CYCLONEV-GT-DK
+	make fpga-test BOARD=AES-KU040-DB-G
+	make clean && make setup && make -C ../iob_soc_opencryptolinux_V*/ doc-test
 
-fusesoc-sim-setup:
-	make -C $(FUSESOC_DIR) sim-setup ALGORITHM=$(ALGORITHM)
+test-linux-fpga-connect: build_dir_name
+	-rm $(BUILD_DIR)/hardware/fpga/test.log
+	-ln -s minicom_test1.txt $(BUILD_DIR)/hardware/fpga/minicom_linux_script.txt
+	make fpga-connect RUN_LINUX=1 BOOT_FLOW=$(BOOT_FLOW)
 
-fusesoc-sim-build:
-	make -C $(FUSESOC_DIR) sim-build ALGORITHM=$(ALGORITHM)
-		
-fusesoc-sim-run:
-	make -C $(FUSESOC_DIR) sim-run ALGORITHM=$(ALGORITHM)
-
-fusesoc-fpga-setup:
-	make -C $(FUSESOC_DIR) fpga-setup ALGORITHM=$(ALGORITHM)
-
-fusesoc-fpga-build:
-	make -C $(FUSESOC_DIR) fpga-build ALGORITHM=$(ALGORITHM)
-		
-fusesoc-fpga-run: fusesoc-fpga-build
-	make -C $(FUSESOC_DIR) fpga-run ALGORITHM=$(ALGORITHM)
-
-fusesoc-clean:
-	make -C $(FUSESOC_DIR) clean ALGORITHM=$(ALGORITHM)
-
-#
-# OPENLANE TARGETS
-#
-OPENLANE_FLOW_DIR=$(HW_DIR)/asic/openlane
-openlane-setup:
-	make -C $(OPENLANE_FLOW_DIR) setup
-openlane-run:
-	make -C $(OPENLANE_FLOW_DIR) run
-openlane-clean:
-	make -C $(OPENLANE_FLOW_DIR) clean
-openlane-post-synth-sim:
-	make -C $(OPENLANE_FLOW_DIR)/simulation test OPENLANE_SIM_TYPE=post-synth
-openlane-post-layout-sim:
-	make -C $(OPENLANE_FLOW_DIR)/simulation test OPENLANE_SIM_TYPE=post-layout
-openlane-sim-clean:
-	make -C $(OPENLANE_FLOW_DIR)/simulation clean
-
-#
-# GENERATE SPINALHDL VERILOG SOURCES
-#
-gen-spinal-sources:
-	make -C $(HW_DIR) gen-spinal-sources
-
+.PHONY: sim-test fpga-test test-all test-linux-fpga-connect
