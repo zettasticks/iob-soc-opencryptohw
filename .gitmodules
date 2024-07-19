@@ -4,9 +4,9 @@
 [submodule "submodules/ETHERNET"]
 	path = submodules/ETHERNET
 	url = git@github.com:IObundle/iob-eth.git
-[submodule "submodules/OpenLane"]
-	path = submodules/OpenLane
-	url = https://github.com/The-OpenROAD-Project/OpenLane.git
 [submodule "submodules/IOBSOC"]
 	path = submodules/IOBSOC
 	url = git@github.com:IObundle/iob-soc.git
+[submodule "submodules/VEXRISCV"]
+	path = submodules/VEXRISCV
+	url = git@github.com:IObundle/iob-vexriscv.git
