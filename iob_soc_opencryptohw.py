@@ -3,12 +3,15 @@ import os
 import sys
 import shutil
 
+from config_gen import append_str_config_build_mk
+
 from iob_soc import iob_soc
 from iob_module import iob_module
 
 from iob_versat import CreateVersatClass
 from iob_eth import iob_eth
-from iob_vexriscv import iob_vexriscv
+
+# from iob_vexriscv import iob_vexriscv
 from iob_reset_sync import iob_reset_sync
 
 VERSAT_SPEC = "versatSpec.txt"
@@ -51,6 +54,7 @@ class iob_soc_opencryptohw(iob_soc):
                         "AXI_LEN_W": "AXI_LEN_W",
                         "AXI_ADDR_W": "AXI_ADDR_W",
                         "AXI_DATA_W": "AXI_DATA_W",
+                        "MEM_ADDR_OFFSET": "MEM_ADDR_OFFSET",
                     },
                 )
             )
@@ -79,6 +83,7 @@ class iob_soc_opencryptohw(iob_soc):
                 {"interface": "dBus_axi_m_portmap"},
                 {"interface": "iBus_axi_m_portmap"},
                 # iob_vexriscv,
+                iob_eth,
                 cls.versat_type,
                 iob_reset_sync,
             ]
@@ -123,8 +128,6 @@ class iob_soc_opencryptohw(iob_soc):
         for script in iob_soc_scripts:
             src_file = f"{__class__.setup_dir}/submodules/IOBSOC/scripts/{script}.py"
             shutil.copy2(src_file, dst)
-        src_file = f"{__class__.setup_dir}/scripts/check_if_run_linux.py"
-        shutil.copy2(src_file, dst)
 
         if cls.is_top_module:
             # Set ethernet MAC address
@@ -154,6 +157,14 @@ endif
         # Append confs or override them if they exist
 
         confs = [
+            {
+                "name": "INIT_MEM",
+                "type": "M",
+                "val": False,
+                "min": "0",
+                "max": "1",
+                "descr": "No init mem.",
+            },
             {
                 "name": "SRAM_ADDR_W",
                 "type": "P",
@@ -189,6 +200,7 @@ endif
 
     @classmethod
     def _setup_portmap(cls):
+        super()._setup_portmap()
         if iob_eth in cls.submodule_list:
             cls.peripheral_portmap += [
                 # ETHERNET
