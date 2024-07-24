@@ -681,12 +681,12 @@ static size_t versat_crypto_hashblocks_sha256(const uint8_t *in, size_t inlen) {
    while (inlen >= 64) {
       ACCEL_TOP_sha_MemRead_ext_addr = (iptr) in;
 
-      printf("A2\n");
+      //printf("A2\n");
    
       // Loads data + performs work
       RunAccelerator(1);
 
-      printf("A3\n");
+      //printf("A3\n");
    
       if(!initVersat){
          VersatUnitWrite(TOP_sha_State_s_0_reg_addr,0,initialStateValues[0]);
@@ -711,7 +711,7 @@ void VersatSHA(uint8_t *out, const uint8_t *in, size_t inlen) {
    uint8_t padded[128];
    uint64_t bytes = inlen;
 
-   printf("A1\n");
+   //printf("A1\n");
    versat_crypto_hashblocks_sha256(in, inlen);
    in += inlen;
    inlen &= 63;

@@ -3,7 +3,7 @@
 #include <stdbool.h>
 
 #include "printf.h"
-#include "iob-eth.h"
+#include "iob-uart.h"
 
 // McEliece
 #include "api.h"
@@ -14,12 +14,11 @@ int VersatMcEliece(unsigned char *pk,unsigned char *sk);
 char* GetHexadecimal(const char* text,char* buffer,int str_size);
 void AES_ECB256(const uint8_t* key,const uint8_t* plaintext,uint8_t* result);
 
-//#include "string.h"
-
+// TODO: Move this to a platform file layer or something.
 String PushFileFromEthernet(const char* filepath){
-  uint32_t file_size = uart_recvfile_ethernet(filepath);
+  char* start = PushArray(globalArena,0,char);
+  uint32_t file_size = uart_recvfile((char*) filepath,start);
   char* testFile = PushArray(globalArena,file_size + 1,char);
-  eth_rcv_file(testFile,file_size);
   testFile[file_size] = '\0';
 
   return (String){.str=testFile,.size=file_size};
@@ -81,7 +80,9 @@ int VersatMcElieceTests(){
 
   int versatTimeAccum = 0;
 
-  String content = PushFileFromEthernet("../../software/KAT/McElieceRound4kat_kem.rsp");
+  String content = PushFileFromEthernet("../../software/KAT/McElieceRound4kat_kem_short.rsp");
+  printf("Content size: %d\n",content.size);
+
   char* ptr = content.str;
   int goodTests = 0;
   int tests = 0;
@@ -97,7 +98,7 @@ int VersatMcElieceTests(){
 
     ptr = SearchAndAdvance(ptr,STRING("SEED = "));
     if(ptr == NULL){
-      printf("McEliece early exit. Something wrong with testfile\n");
+      printf("McEliece early exit 1. Something wrong with testfile\n");
       break;
     }
 
@@ -106,26 +107,45 @@ int VersatMcElieceTests(){
 
     ptr = SearchAndAdvance(ptr,STRING("PK = "));
     if(ptr == NULL){
-      printf("McEliece early exit. Something wrong with testfile\n");
+      printf("McEliece early exit 2. Something wrong with testfile\n");
       break;
     }
   
     char* good_pk = ptr;
 
+    ptr = SearchAndAdvance(ptr,STRING("PKL = "));
+    if(ptr == NULL){
+      printf("McEliece early exit 3. Something wrong with testfile\n");
+      break;
+    }
+
+    char* good_pkl = ptr;
+
     ptr = SearchAndAdvance(ptr,STRING("SK = "));
     if(ptr == NULL){
-      printf("McEliece early exit. Something wrong with testfile\n");
+      printf("McEliece early exit 4. Something wrong with testfile\n");
       break;
     }
 
     char* good_sk = ptr;
 
+    ptr = SearchAndAdvance(ptr,STRING("SKL = "));
+    if(ptr == NULL){
+      printf("McEliece early exit 5. Something wrong with testfile\n");
+      break;
+    }
+
+    char* good_skl = ptr;
+
     nist_kat_init(seed, NULL, 256);
+
+    printf("Before\n");
 
     int start = GetTime();
     VersatMcEliece(public_key, secret_key);
     int end = GetTime();
 
+    printf("After\n");
     // Software only implementation is slow and we are already comparing to KAT anyway and so, for McEliece, we skipping software implementation test of McEliece.
     //PQCLEAN_MCELIECE348864_CLEAN_crypto_kem_keypair(public_key, secret_key);
 
@@ -136,14 +156,22 @@ int VersatMcElieceTests(){
     GetHexadecimal(secret_key,secret_key_hex,PQCLEAN_MCELIECE348864_CLEAN_CRYPTO_SECRETKEYBYTES);
 
     bool good = true;
-    for(int i = 0; i < PQCLEAN_MCELIECE348864_CLEAN_CRYPTO_PUBLICKEYBYTES; i++){
+    for(int i = 0; i < 1024; i++){
       if(public_key_hex[i] != good_pk[i]){
         good = false;
         break;
       }
+      if(public_key_hex[i + PQCLEAN_MCELIECE348864_CLEAN_CRYPTO_PUBLICKEYBYTES * 2 - 1024] != good_pkl[i]){
+        good = false;
+        break;
+      }
     }
-    for(int i = 0; i < PQCLEAN_MCELIECE348864_CLEAN_CRYPTO_SECRETKEYBYTES; i++){
+    for(int i = 0; i < 1024; i++){
       if(secret_key_hex[i] != good_sk[i]){
+        good = false;
+        break;
+      }
+      if(secret_key_hex[i + PQCLEAN_MCELIECE348864_CLEAN_CRYPTO_SECRETKEYBYTES * 2 - 1024] != good_skl[i]){
         good = false;
         break;
       }
@@ -154,10 +182,14 @@ int VersatMcElieceTests(){
       goodTests += 1;
     } else {
       printf("McEliece Test %02d: Error\n",tests);
-      printf("  Expected Public (first 32 chars): %.32s\n",good_pk); 
-      printf("  Expected Secret (first 32 chars): %.32s\n",good_sk); 
-      printf("  Got Public (first 32 chars):      %.32s\n",public_key_hex);
-      printf("  Got Secret (first 32 chars):      %.32s\n",secret_key_hex);
+      printf("  Expected Public      (first 32 chars): %.32s\n",good_pk); 
+      printf("  Expected Public Last (first 32 chars): %.32s\n",good_pkl); 
+      printf("  Expected Secret      (first 32 chars): %.32s\n",good_sk);  
+      printf("  Expected Secret Last (first 32 chars): %.32s\n",good_skl); 
+      printf("  Got Public      (first 32 chars):      %.32s\n",public_key_hex);
+      printf("  Got Public Last (first 32 chars):      %.32s\n",&public_key_hex[PQCLEAN_MCELIECE348864_CLEAN_CRYPTO_PUBLICKEYBYTES * 2 - 1024]);
+      printf("  Got Secret      (first 32 chars):      %.32s\n",secret_key_hex);
+      printf("  Got Secret Last (first 32 chars):      %.32s\n",&secret_key_hex[PQCLEAN_MCELIECE348864_CLEAN_CRYPTO_SECRETKEYBYTES * 2 - 1024]);
     }
 
     tests += 1;

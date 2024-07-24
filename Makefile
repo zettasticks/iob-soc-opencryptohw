@@ -16,6 +16,8 @@ ifeq ($(INIT_MEM),1)
 SETUP_ARGS += INIT_MEM
 endif
 
+
+
 setup:
 	make build-setup SETUP_ARGS="$(SETUP_ARGS)"
 
@@ -40,6 +42,9 @@ fpga-run:
 	nix-shell --run 'make clean setup INIT_MEM=$(INIT_MEM) USE_EXTMEM=$(USE_EXTMEM)'
 	nix-shell --run 'make -C ../$(CORE)_V*/ fpga-fw-build BOARD=$(BOARD)'
 	make -C ../$(CORE)_V*/ fpga-run BOARD=$(BOARD)
+
+fpga-run-only:
+	make -C ../$(CORE)_V*/ fpga-fw-build fpga-run BOARD=$(BOARD)
 
 fpga-build:
 	nix-shell --run 'make clean setup INIT_MEM=$(INIT_MEM) USE_EXTMEM=$(USE_EXTMEM)'

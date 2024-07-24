@@ -88,7 +88,7 @@ build_emul: fw_emul
 	@echo "build"
 
 #board client command
-BOARD_GRAB_CMD ?=../scripts/board_client.py grab 300
+BOARD_GRAB_CMD ?=../scripts/board_client.py grab 30000
 
 test.log: build_emul
 	$(BOARD_GRAB_CMD) -s './fw_emul' -c '$(CONSOLE_CMD)'

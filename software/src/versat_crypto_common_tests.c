@@ -23,7 +23,7 @@ void InitializeCryptoSide(int versatAddress){
   versat_init(versatAddress);
   ConfigEnableDMA(true);
 
-  globalArenaInst = InitArena(1*512*1024); // 16 megabytes should suffice. Arena memory used by crypto algorithms, both by software and Versat impl.
+  globalArenaInst = InitArena(8*1024*1024); // 8 megabytes should suffice. Arena memory used by crypto algorithms, both by software and Versat impl.
   globalArena = &globalArenaInst; 
 }
 
@@ -97,6 +97,9 @@ TestState VersatCommonSHATests(String content){
 
     char* expected = ptr;
 
+    //printf("%.*s\n",16,message);
+    //printf("%.*s\n",16,expected);
+
     unsigned char versat_digest[256];
     unsigned char software_digest[256];
     for(int i = 0; i < 256; i++){
@@ -104,16 +107,16 @@ TestState VersatCommonSHATests(String content){
       software_digest[i] = 0;
     }
   
-    printf("2\n");
+    //printf("2\n");
     int start = GetTime();
     VersatSHA(versat_digest,message,len / 8);
-    printf("3\n");
+    //printf("3\n");
     int middle = GetTime();
-    printf("3.1\n");
+    //printf("3.1\n");
     sha256(software_digest,message,len / 8);
-    printf("3.2\n");
+    //printf("3.2\n");
     int end = GetTime();
-    printf("4\n");
+    //printf("4\n");
 
     bool good = true;
     for(int i = 0; i < 256; i++){

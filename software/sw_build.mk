@@ -5,7 +5,7 @@ ROOT_DIR ?=..
 # Local embedded makefile settings for custom bootloader and firmware targets.
 
 ifneq ($(shell grep -s "#define SIMULATION" src/bsp.h),)
-SIMULATION=1
+SIMULATION=0
 endif
 
 #Function to obtain parameter named $(1) in verilog header file located in $(2)

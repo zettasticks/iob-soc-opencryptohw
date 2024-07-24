@@ -1,7 +1,7 @@
 #include "bsp.h"
 #include "iob-timer.h"
 #include "iob-uart.h"
-#include "iob-eth.h"
+//#include "iob-eth.h"
 #include "iob_soc_opencryptohw_conf.h"
 #include "iob_soc_opencryptohw_periphs.h"
 #include "iob_soc_opencryptohw_system.h"
@@ -21,6 +21,7 @@ uint32_t uart_recvfile_ethernet(const char *file_name) {
   uart_puts(UART_PROGNAME);
   uart_puts(": requesting to receive file by ethernet\n");
 
+  uart_puts("Before\n");
   // send file receive by ethernet request
   uart_putc(0x13);
 
@@ -47,7 +48,6 @@ int GetTime(){
 int main() {
   int test_result = 0;
 
-  #if 1
   // init timer
   timer_init(TIMER0_BASE);
 
@@ -56,37 +56,34 @@ int main() {
   printf_init(&uart_putc);
 
   // init eth
-  eth_init(ETH0_BASE, &clear_cache);
-  eth_wait_phy_rst();
+  // eth_init(ETH0_BASE, &clear_cache);
+  // eth_wait_phy_rst();
 
   // test puts
   uart_puts("\n\n\nHello world!\n\n\n");
 
   printf("Using printf\n");
 
-#if 1
   InitializeCryptoSide(VERSAT0_BASE);
 
   uart_puts("\n\n\nInitialized crypto side\n\n\n");
 
   // Tests are too big and slow to perform during simulation.
   // Comment out the source files in sw_build.mk to also reduce binary size and speedup simulation.
-#ifndef SIMULATION
+//#ifndef SIMULATION
   uart_puts("\n\n\nPC tests\n\n\n");
   test_result |= VersatSHATests();
   test_result |= VersatAESTests();
   test_result |= VersatMcElieceTests();
-#else
-  uart_puts("\n\n\nSim tests\n\n\n");
-  test_result |= VersatSimpleSHATests();
-  test_result |= VersatSimpleAESTests();
-#endif
-#endif
+//#else
+//  uart_puts("\n\n\nSim tests\n\n\n");
+//  test_result |= VersatSimpleSHATests();
+//  test_result |= VersatSimpleAESTests();
+//#endif
 
   // read current timer count, compute elapsed time
   unsigned long long elapsed = timer_get_count();
   unsigned int elapsedu = elapsed / (FREQ / 1000000);
 
   uart_finish();
-  #endif
 }

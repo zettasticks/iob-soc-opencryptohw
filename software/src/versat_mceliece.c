@@ -291,6 +291,8 @@ int Versat_pk_gen(unsigned char *pk, unsigned char *sk, const uint32_t *perm, in
         for (j = 0; j < 8; j++) {
             row = i * 8 + j;
 
+            printf("%d\n",i);
+
             if (row >= PK_NROWS) {
                 break;
             }
