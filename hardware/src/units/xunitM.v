@@ -1,8 +1,7 @@
 `timescale 1ns / 1ps
-`include "xversat.vh"
 
 module xunitM #(
-         parameter DELAY_W = 32,
+         parameter DELAY_W = 7,
          parameter DATA_W = 32
               )
     (
@@ -85,7 +84,7 @@ begin
       latency <= 5'h11; // cycles from valid input to valid output
    end else if (|delay) begin
      delay <= delay - 1;
-   end else if (running) begin
+   end else begin
       if(|latency) begin
          latency <= latency - 1;
       end
