@@ -175,6 +175,61 @@ static crypto_uint64 uint64_is_zero_declassify(uint64_t t) {
     return mask;
 }
 
+
+#if 0
+module McEliece(){
+   ReadWriteMem mat;
+   VRead row;
+   VWrite writer;
+   Const mask;
+#
+   a = row & mask;
+   b = mat ^ a;
+
+   c = mat & mask;
+   d = row ^ c;
+
+   b -> mat;
+   d -> writer;
+}
+#endif
+
+void TestMcEliece(){
+    // Init needed values for versat later on.  
+    CryptoAlgosConfig* topConfig = (CryptoAlgosConfig*) accelConfig;
+    vec = (McElieceConfig*) &topConfig->eliece;
+    matAddr = (void*) TOP_eliece_mat_addr;
+
+    vec->mask.constant = 0xff;
+
+    int matValues[] = {0,1,2,3,4,5,6,7};
+    int rowValues[] = {8,9,10,11,12,13,14,15};
+    int result[8] = {};
+
+    vec->mat.iterA = 1;
+    vec->mat.incrA = 1;
+    vec->mat.iterB = 1;
+    vec->mat.incrB = 1;
+    vec->mat.perA = 8;
+    vec->mat.dutyA = 8;
+    vec->mat.perB = 8;
+    vec->mat.dutyB = 8;
+
+    VersatMemoryCopy(matAddr,matValues,8 * sizeof(int));
+    ConfigureSimpleVRead(&vec->row,8,rowValues);
+
+    RunAccelerator(1);
+    vec->mat.in0_wr = 1;
+    RunAccelerator(1);
+
+    for(int i = 0; i < 8; i++){
+        printf("%x ",VersatUnitRead(matAddr,i));
+    }
+    printf("\n");
+
+    //ConfigureSimpleVReadBare(&vec->row);
+}
+
 /* input: secret key sk */
 /* output: public key pk */
 int Versat_pk_gen(unsigned char *pk, unsigned char *sk, const uint32_t *perm, int16_t *pi) {
@@ -183,6 +238,10 @@ int Versat_pk_gen(unsigned char *pk, unsigned char *sk, const uint32_t *perm, in
 
     int mark = MarkArena(globalArena);
 
+    printf("SK:%02x%02x%02x%02x%02x%02x%02x%02x\n",sk[0],sk[1],sk[2],sk[3],sk[4],sk[5],sk[6],sk[7]);
+    printf("PE:%02x%02x%02x%02x%02x%02x%02x%02x\n",perm[0],perm[1],perm[2],perm[3],perm[4],perm[5],perm[6],perm[7]);
+    printf("PI:%02x%02x%02x%02x%02x%02x%02x%02x\n",pi[0],pi[1],pi[2],pi[3],pi[4],pi[5],pi[6],pi[7]);
+    
     // Init needed values for versat later on.  
     CryptoAlgosConfig* topConfig = (CryptoAlgosConfig*) accelConfig;
     vec = (McElieceConfig*) &topConfig->eliece;
@@ -300,6 +359,8 @@ int Versat_pk_gen(unsigned char *pk, unsigned char *sk, const uint32_t *perm, in
             uint32_t *out_int = CAST_PTR(uint32_t*,mat[row]);
             EndAccelerator();
 
+            //printf("%02x%02x%02x%02x%02x%02x%02x%02x\n",mat[row][0],mat[row][1],mat[row][2],mat[row][3],mat[row][4],mat[row][5],mat[row][6],mat[row][7]);
+
             VersatLoadRow(out_int);
             bool first = true;
             for (k = row + 1; k < PK_NROWS; k++) {
@@ -326,6 +387,11 @@ int Versat_pk_gen(unsigned char *pk, unsigned char *sk, const uint32_t *perm, in
             }
 
             ReadRow(out_int);
+
+            //printf("%02x%02x%02x%02x%02x%02x%02x%02x\n",mat[row][0],mat[row][1],mat[row][2],mat[row][3],mat[row][4],mat[row][5],mat[row][6],mat[row][7]);
+
+            //uart_finish();
+            //exit(0);
 
             int index = 0;
             for (k = 0; k < PK_NROWS; k++) {
@@ -361,54 +427,147 @@ int VersatMcEliece
     unsigned char *sk
 ) {
     int i;
+    int iteration = 0;
     unsigned char seed[ 33 ] = {64};
-    unsigned char r[ SYS_N / 8 + (1 << GFBITS)*sizeof(uint32_t) + SYS_T * 2 + 32 ];
+    //unsigned char r[ SYS_N / 8 + (1 << GFBITS)*sizeof(uint32_t) + SYS_T * 2 + 32 ] = {0};
     unsigned char *rp, *skp;
 
+    memset(seed,64,sizeof(unsigned char) * 33);
+
+    printf("SEED: %c%c%c%c%c%c%c%c\n",seed[0],seed[1],seed[2],seed[3],seed[4],seed[5],seed[6],seed[7]);
+
+    int sizeofR = SYS_N / 8 + (1 << GFBITS)*sizeof(uint32_t) + SYS_T * 2 + 32;
+    int sizeofF = SYS_T * sizeof(gf);
+    int sizeofPerm = (1 << GFBITS) * sizeof(uint32_t);
+
+    int mark = MarkArena(globalArena);
+
+    printf("SEED: %c%c%c%c%c%c%c%c\n",seed[0],seed[1],seed[2],seed[3],seed[4],seed[5],seed[6],seed[7]);
+
+    unsigned char* r = PushAndZeroArray(globalArena,sizeofR,unsigned char);
+
+    gf* f = PushAndZeroArray(globalArena,SYS_T + 1000,gf);
+    printf("%p %p %d %d\n",globalArena,globalArena->ptr,globalArena->used,globalArena->allocated);
+    printf(" F0: %02x%02x%02x%02x%02x%02x%02x%02x\n",f[0],f[1],f[2],f[3],f[4],f[5],f[6],f[7]);
+    gf* irr = PushAndZeroArray(globalArena,SYS_T + 1000,gf);
+    printf("%p %p %d %d\n",globalArena,globalArena->ptr,globalArena->used,globalArena->allocated);
+    printf(" F0: %02x%02x%02x%02x%02x%02x%02x%02x\n",f[0],f[1],f[2],f[3],f[4],f[5],f[6],f[7]);
+    uint32_t* perm = PushAndZeroArray(globalArena,(1 << GFBITS) + 1000,uint32_t);
+    printf("%p %p %d %d\n",globalArena,globalArena->ptr,globalArena->used,globalArena->allocated);
+    printf(" F0: %02x%02x%02x%02x%02x%02x%02x%02x\n",f[0],f[1],f[2],f[3],f[4],f[5],f[6],f[7]);
+    int16_t* pi = PushAndZeroArray(globalArena,(1 << GFBITS) + 1000,int16_t);
+    printf("%p %p %d %d\n",globalArena,globalArena->ptr,globalArena->used,globalArena->allocated);
+    printf(" F0: %02x%02x%02x%02x%02x%02x%02x%02x\n",f[0],f[1],f[2],f[3],f[4],f[5],f[6],f[7]);
+
+    for(int i = 0; i < 16; i++){
+        pi[i] = 0;
+    }
+
+#if 0
     gf f[ SYS_T ]; // element in GF(2^mt)
     gf irr[ SYS_T ]; // Goppa polynomial
     uint32_t perm[ 1 << GFBITS ]; // random permutation as 32-bit integers
     int16_t pi[ 1 << GFBITS ]; // random permutation
 
+    printf("F: %d\n",sizeof(f));
+    printf("I: %d\n",sizeof(irr));
+    printf("p: %d\n",sizeof(perm));
+    printf("P: %d\n",sizeof(pi));
+    memset(f,0,sizeof(f));
+    memset(irr,0,sizeof(irr));
+    memset(perm,0,sizeof(perm));
+    memset(pi,0,sizeof(pi));
+#endif
+
+    printf(" F0: %02x%02x%02x%02x%02x%02x%02x%02x\n",f[0],f[1],f[2],f[3],f[4],f[5],f[6],f[7]);
+    printf("IR0: %02x%02x%02x%02x%02x%02x%02x%02x\n",irr[0],irr[1],irr[2],irr[3],irr[4],irr[5],irr[6],irr[7]);
+    printf("PE0: %02x%02x%02x%02x%02x%02x%02x%02x\n",perm[0],perm[1],perm[2],perm[3],perm[4],perm[5],perm[6],perm[7]);
+    printf("PI0: %02x%02x%02x%02x%02x%02x%02x%02x\n",pi[0],pi[1],pi[2],pi[3],pi[4],pi[5],pi[6],pi[7]);
+
     randombytes(seed + 1, 32);
 
+    printf(" F1: %02x%02x%02x%02x%02x%02x%02x%02x\n",f[0],f[1],f[2],f[3],f[4],f[5],f[6],f[7]);
+    printf("IR1: %02x%02x%02x%02x%02x%02x%02x%02x\n",irr[0],irr[1],irr[2],irr[3],irr[4],irr[5],irr[6],irr[7]);
+    printf("PE1: %02x%02x%02x%02x%02x%02x%02x%02x\n",perm[0],perm[1],perm[2],perm[3],perm[4],perm[5],perm[6],perm[7]);
+    printf("PI1: %02x%02x%02x%02x%02x%02x%02x%02x\n",pi[0],pi[1],pi[2],pi[3],pi[4],pi[5],pi[6],pi[7]);
+
     while (1) {
-        rp = &r[ sizeof(r) - 32 ];
+        //printf("iteration: %d\n",iteration++);
+        rp = &r[ sizeofR - 32 ];
         skp = sk;
 
+        printf(" F2: %02x%02x%02x%02x%02x%02x%02x%02x\n",f[0],f[1],f[2],f[3],f[4],f[5],f[6],f[7]);
+        printf("IR2: %02x%02x%02x%02x%02x%02x%02x%02x\n",irr[0],irr[1],irr[2],irr[3],irr[4],irr[5],irr[6],irr[7]);
+        printf("PE2: %02x%02x%02x%02x%02x%02x%02x%02x\n",perm[0],perm[1],perm[2],perm[3],perm[4],perm[5],perm[6],perm[7]);
+        printf("PI2: %02x%02x%02x%02x%02x%02x%02x%02x\n",pi[0],pi[1],pi[2],pi[3],pi[4],pi[5],pi[6],pi[7]);
+
         // expanding and updating the seed
-        shake(r, sizeof(r), seed, 33);
+        shake(r, sizeofR, seed, 33);
         memcpy(skp, seed + 1, 32);
         skp += 32 + 8;
-        memcpy(seed + 1, &r[ sizeof(r) - 32 ], 32);
+        memcpy(seed + 1, &r[ sizeofR - 32 ], 32);
 
+        printf(" F3: %02x%02x%02x%02x%02x%02x%02x%02x\n",f[0],f[1],f[2],f[3],f[4],f[5],f[6],f[7]);
+        printf("IR3: %02x%02x%02x%02x%02x%02x%02x%02x\n",irr[0],irr[1],irr[2],irr[3],irr[4],irr[5],irr[6],irr[7]);
+        printf("PE3: %02x%02x%02x%02x%02x%02x%02x%02x\n",perm[0],perm[1],perm[2],perm[3],perm[4],perm[5],perm[6],perm[7]);
+        printf("PI3: %02x%02x%02x%02x%02x%02x%02x%02x\n",pi[0],pi[1],pi[2],pi[3],pi[4],pi[5],pi[6],pi[7]);
         // generating irreducible polynomial
-        rp -= sizeof(f);
+        rp -= sizeofF;
 
         for (i = 0; i < SYS_T; i++) {
             f[i] = load_gf(rp + i * 2);
         }
 
+        printf(" F4: %02x%02x%02x%02x%02x%02x%02x%02x\n",f[0],f[1],f[2],f[3],f[4],f[5],f[6],f[7]);
+        printf("IR4: %02x%02x%02x%02x%02x%02x%02x%02x\n",irr[0],irr[1],irr[2],irr[3],irr[4],irr[5],irr[6],irr[7]);
+        printf("PE4: %02x%02x%02x%02x%02x%02x%02x%02x\n",perm[0],perm[1],perm[2],perm[3],perm[4],perm[5],perm[6],perm[7]);
+        printf("PI4: %02x%02x%02x%02x%02x%02x%02x%02x\n",pi[0],pi[1],pi[2],pi[3],pi[4],pi[5],pi[6],pi[7]);
         if (genpoly_gen(irr, f)) {
             continue;
         }
+
+        printf(" F5: %02x%02x%02x%02x%02x%02x%02x%02x\n",f[0],f[1],f[2],f[3],f[4],f[5],f[6],f[7]);
+        printf("IR5: %02x%02x%02x%02x%02x%02x%02x%02x\n",irr[0],irr[1],irr[2],irr[3],irr[4],irr[5],irr[6],irr[7]);
+        printf("PE5: %02x%02x%02x%02x%02x%02x%02x%02x\n",perm[0],perm[1],perm[2],perm[3],perm[4],perm[5],perm[6],perm[7]);
+        printf("PI5: %02x%02x%02x%02x%02x%02x%02x%02x\n",pi[0],pi[1],pi[2],pi[3],pi[4],pi[5],pi[6],pi[7]);
 
         for (i = 0; i < SYS_T; i++) {
             store_gf(skp + i * 2, irr[i]);
         }
 
+        printf(" F6: %02x%02x%02x%02x%02x%02x%02x%02x\n",f[0],f[1],f[2],f[3],f[4],f[5],f[6],f[7]);
+        printf("IR6: %02x%02x%02x%02x%02x%02x%02x%02x\n",irr[0],irr[1],irr[2],irr[3],irr[4],irr[5],irr[6],irr[7]);
+        printf("PE6: %02x%02x%02x%02x%02x%02x%02x%02x\n",perm[0],perm[1],perm[2],perm[3],perm[4],perm[5],perm[6],perm[7]);
+        printf("PI6: %02x%02x%02x%02x%02x%02x%02x%02x\n",pi[0],pi[1],pi[2],pi[3],pi[4],pi[5],pi[6],pi[7]);
+
         skp += IRR_BYTES;
 
         // generating permutation
-        rp -= sizeof(perm);
+        rp -= sizeofPerm;
 
         for (i = 0; i < (1 << GFBITS); i++) {
             perm[i] = load4(rp + i * 4);
         }
 
+        printf(" F7: %02x%02x%02x%02x%02x%02x%02x%02x\n",f[0],f[1],f[2],f[3],f[4],f[5],f[6],f[7]);
+        printf("IR7: %02x%02x%02x%02x%02x%02x%02x%02x\n",irr[0],irr[1],irr[2],irr[3],irr[4],irr[5],irr[6],irr[7]);
+        printf("PE7: %02x%02x%02x%02x%02x%02x%02x%02x\n",perm[0],perm[1],perm[2],perm[3],perm[4],perm[5],perm[6],perm[7]);
+        printf("PI7: %02x%02x%02x%02x%02x%02x%02x%02x\n",pi[0],pi[1],pi[2],pi[3],pi[4],pi[5],pi[6],pi[7]);
+     
+        //uart_finish();
+        //exit(0);
+
+#if 1
         if (Versat_pk_gen(pk, skp - IRR_BYTES, perm, pi)) {
             continue;
         }
+#endif
+
+#if 0
+        if (pk_gen(pk, skp - IRR_BYTES, perm, pi)) {
+            continue;
+        }
+#endif
 
         controlbitsfrompermutation(skp, pi, GFBITS, 1 << GFBITS);
         skp += COND_BYTES;
@@ -424,5 +583,6 @@ int VersatMcEliece
         break;
     }
 
+    PopArena(globalArena,mark);
     return 0;
 }

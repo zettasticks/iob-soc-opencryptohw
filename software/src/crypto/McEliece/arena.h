@@ -16,6 +16,7 @@ void* PushAndZeroBytes(Arena* arena,int size);
 int MarkArena(Arena* arena);
 void PopArena(Arena* arena,int mark);
 
-#define PushArray(ARENA,N_ELEM,TYPE) (TYPE*) PushBytes(ARENA,(N_ELEM) * sizeof(TYPE))
+#define PushArray(ARENA,N_ELEM,TYPE)        (TYPE*) PushBytes(ARENA,(N_ELEM) * sizeof(TYPE))
+#define PushAndZeroArray(ARENA,N_ELEM,TYPE) (TYPE*) PushAndZeroBytes(ARENA,(N_ELEM) * sizeof(TYPE))
 
 #endif // H_MEMORY_POOL_H

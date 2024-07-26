@@ -218,8 +218,8 @@ void controlbitsfrompermutation(unsigned char *out, const int16 *pi, long long w
 
     int mark = MarkArena(globalArena);
 
-    int32* temp = PushBytes(globalArena,2 * n * sizeof(int32));
-    int16* pi_test = PushBytes(globalArena,n * sizeof(int16));
+    int32* temp = PushAndZeroBytes(globalArena,2 * n * sizeof(int32));
+    int16* pi_test = PushAndZeroBytes(globalArena,n * sizeof(int16));
 
     int16 diff;
     int i;

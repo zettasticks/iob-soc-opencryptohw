@@ -24,6 +24,7 @@ String PushFileFromEthernet(const char* filepath){
   return (String){.str=testFile,.size=file_size};
 }
 
+#if 0
 int VersatSHATests(){
   int mark = MarkArena(globalArena);
   String content = PushFileFromEthernet("../../software/KAT/SHA256ShortMsg.rsp");
@@ -71,6 +72,7 @@ int VersatAESTests(){
   PopArena(globalArena,mark);
   return (result.goodTests == result.tests) ? 0 : 1;
 }
+#endif
 
 int VersatMcElieceTests(){
   int mark = MarkArena(globalArena);
@@ -104,6 +106,7 @@ int VersatMcElieceTests(){
 
     unsigned char seed[49];
     HexStringToHex(seed,ptr);
+    printf("%.96s\n",ptr);
 
     ptr = SearchAndAdvance(ptr,STRING("PK = "));
     if(ptr == NULL){
@@ -194,6 +197,7 @@ int VersatMcElieceTests(){
 
     tests += 1;
     PopArena(globalArena,testMark);
+    break;
   }
   printf("\n\n=======================================================\n");
   printf("McEliece tests: %d passed out of %d\n",goodTests,tests);

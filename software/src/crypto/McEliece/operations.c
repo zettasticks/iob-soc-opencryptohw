@@ -107,9 +107,14 @@ int crypto_kem_keypair
             f[i] = load_gf(rp + i * 2);
         }
 
+        printf("f0: %x\n",f[0]);
+
         if (genpoly_gen(irr, f)) {
             continue;
         }
+
+        printf("f0: %x\n",f[0]);
+        printf("irr: %x\n",irr[0]);
 
         for (i = 0; i < SYS_T; i++) {
             store_gf(skp + i * 2, irr[i]);
@@ -123,6 +128,9 @@ int crypto_kem_keypair
         for (i = 0; i < (1 << GFBITS); i++) {
             perm[i] = load4(rp + i * 4);
         }
+        printf("f0: %x%x%x%x\n",f[0],f[1],f[2],f[3]);
+        printf("irr: %x%x%x%x\n",irr[0],irr[1],irr[2],irr[3]);
+        printf("perm: %x%x%x%x\n",perm[0],perm[1],perm[2],perm[3]);
 
         if (pk_gen(pk, skp - IRR_BYTES, perm, pi)) {
             continue;

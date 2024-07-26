@@ -49,6 +49,28 @@ int HexStringToHex(char* buffer,const char* str){
    return inserted;
 }
 
+char GetHexadecimalChar(unsigned char value){
+  if(value < 10){
+    return '0' + value;
+  } else{
+    return 'A' + (value - 10);
+  }
+}
+
+char* GetHexadecimal(const char* text,char* buffer,int str_size){
+  int i = 0;
+  unsigned char* view = (unsigned char*) text;
+  for(; i< str_size; i++){
+    buffer[i*2] = GetHexadecimalChar(view[i] / 16);
+    buffer[i*2+1] = GetHexadecimalChar(view[i] % 16);
+  }
+
+  buffer[i*2] = '\0';
+
+  return buffer;
+}
+
+#if 0
 const uint8_t sbox[256] = {
    0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,
    0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0, 0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0,
@@ -470,159 +492,10 @@ void LoadIV(uint8_t* iv){
    config->aes.lastResult_0.disabled = 1;
 }
 
-typedef enum{
-   CryptoType_ECB128,
-   CryptoType_ECB256,
-   CryptoType_CBC128,
-   CryptoType_CBC256,
-   CryptoType_CTR128,
-   CryptoType_CTR256
-} CryptoType;
-
 void AES_ECB256(uint8_t* key,uint8_t* data,uint8_t* encrypted){
    ExpandKey(key,true);
 
    Encrypt(data,encrypted,NULL,true,false);
-}
-
-void ECB(uint8_t* key,uint8_t* data,uint8_t* encrypted,uint8_t* decrypted,bool is256){
-   InitAES();
-
-   ExpandKey(key,is256);
-
-   Encrypt(data,encrypted,NULL,is256,false);
-   Encrypt(data + 16,encrypted + 16,NULL,is256,false);
-
-   InitInvAES();
-   Decrypt(encrypted,decrypted,NULL,is256);
-   Decrypt(encrypted + 16,decrypted + 16,NULL,is256);
-}
-
-void CBC(uint8_t* key,uint8_t* iv,uint8_t* data,uint8_t* encrypted,uint8_t* decrypted,bool is256){
-   InitAES();
-
-   ExpandKey(key,is256);
-   LoadIV(iv);
-
-   Encrypt(data,encrypted,NULL,is256,true);
-   Encrypt(data + 16,encrypted + 16,NULL,is256,true);
-
-   InitInvAES();
-
-   LoadIV(iv);
-   Decrypt(encrypted,decrypted,NULL,is256);
-   LoadIV(encrypted);
-   Decrypt(encrypted + 16,decrypted + 16,NULL,is256);
-}
-
-uint32_t Swap(uint32_t val){
-   uint32_t res = ((val & 0x000000FF) << 24) |
-                  ((val & 0x0000FF00) << 8)  |
-                  ((val & 0x00FF0000) >> 8)  |
-                  ((val & 0xFF000000) >> 24);
-
-   return res;
-}
-
-void CTR(uint8_t* key,uint8_t* counter,uint8_t* data,uint8_t* encrypted,uint8_t* decrypted,bool is256){
-   uint8_t counterBuffer[16];
-
-   InitAES();
-   memcpy(counterBuffer,counter,16 * sizeof(uint8_t));
-
-   ExpandKey(key,is256);
-   Encrypt(counterBuffer,encrypted,data,is256,false);
-
-   uint32_t* view = ((uint32_t*) ((void*)(counterBuffer + 12)));
-
-   *view = Swap(Swap(*view) + 1);
-
-   Encrypt(counterBuffer,encrypted + 16,data + 16,is256,false);
-
-   memcpy(counterBuffer,counter,16 * sizeof(uint8_t));
-   Encrypt(counterBuffer,decrypted,encrypted,is256,false);
-
-   *view = Swap(Swap(*view) + 1);
-
-   Encrypt(counterBuffer,decrypted + 16,encrypted + 16,is256,false);
-}
-
-void DoOneRound(CryptoType type,const char* key,const char* iv,const char* plaintext,const char* expected){
-   uint8_t keyBuffer[32];
-   uint8_t dataBuffer[32];
-   uint8_t encrypted[32];
-   uint8_t decrypted[32];
-   uint8_t ivBuffer[16];
-
-   HexStringToHex((char*) keyBuffer,key);
-   HexStringToHex((char*) dataBuffer,plaintext);
-
-   switch(type){
-   case CryptoType_CBC128:
-   case CryptoType_CBC256:
-   case CryptoType_CTR128:
-   case CryptoType_CTR256: HexStringToHex((char*) ivBuffer,iv);
-   default: break;
-   }
-
-   switch(type){
-   case CryptoType_ECB128: ECB(keyBuffer,dataBuffer,encrypted,decrypted,false); break;
-   case CryptoType_ECB256: ECB(keyBuffer,dataBuffer,encrypted,decrypted,true); break;
-   case CryptoType_CBC128: CBC(keyBuffer,ivBuffer,dataBuffer,encrypted,decrypted,false); break;
-   case CryptoType_CBC256: CBC(keyBuffer,ivBuffer,dataBuffer,encrypted,decrypted,true); break;
-   case CryptoType_CTR128: CTR(keyBuffer,ivBuffer,dataBuffer,encrypted,decrypted,false); break;
-   case CryptoType_CTR256: CTR(keyBuffer,ivBuffer,dataBuffer,encrypted,decrypted,true); break;
-   }
-
-   const char* name = NULL;
-   switch(type){
-   case CryptoType_ECB128: name = "ECB128"; break;
-   case CryptoType_ECB256: name = "ECB256"; break;
-   case CryptoType_CBC128: name = "CBC128"; break;
-   case CryptoType_CBC256: name = "CBC256"; break;
-   case CryptoType_CTR128: name = "CTR128"; break;
-   case CryptoType_CTR256: name = "CTR256"; break;
-   }
-
-   printf("%s\n",name);
-   printf("Encrypted:");
-   PrintResult(encrypted);
-   printf(" ");
-   PrintResult(encrypted + 16);
-   printf("\n");
-   printf(" Expected:%s",expected);
-   printf("\n");
-   printf("\n");
-   printf("Decrypted:");
-   PrintResult(decrypted);
-   printf(" ");
-   PrintResult(decrypted + 16);
-   printf("\n");
-   printf(" Expected:%.32s",plaintext);
-   printf(" %s",plaintext + 32);
-   printf("\n");
-}
-
-void VersatAES(){
-   const char* key128 = "2b7e151628aed2a6abf7158809cf4f3c";
-
-   //                    vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-   //                                                    vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-   const char* key256 = "603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4";
-   //                       vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-   //                                                       vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-   const char* plaintext = "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e51";
-   const char* iv = "000102030405060708090a0b0c0d0e0f";
-   const char* counter = "f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff";
-
-   DoOneRound(CryptoType_ECB128,key128,NULL,plaintext,"3ad77bb40d7a3660a89ecaf32466ef97 f5d3d58503b9699de785895a96fdbaaf");
-   DoOneRound(CryptoType_ECB256,key256,NULL,plaintext,"f3eed1bdb5d2a03c064b5a7e3db181f8 591ccb10d410ed26dc5ba74a31362870");
-
-   DoOneRound(CryptoType_CBC128,key128,iv,plaintext,"7649abac8119b246cee98e9b12e9197d 5086cb9b507219ee95db113a917678b2");
-   DoOneRound(CryptoType_CBC256,key256,iv,plaintext,"f58c4c04d6e5f1ba779eabfb5f7bfbd6 9cfc4e967edb808d679f777bc6702c7d");
-
-   DoOneRound(CryptoType_CTR128,key128,counter,plaintext,"874d6191b620e3261bef6864990db6ce 9806f66b7970fdff8617187bb9fffdff");
-   DoOneRound(CryptoType_CTR256,key256,counter,plaintext,"601ec313775789a5b7a7f504bbf3d228 f443e3ca4d62b59aca84e990cacaf5c5");
 }
 
 static uint32_t initialStateValues[] = {0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19};
@@ -763,24 +636,4 @@ void VersatSHA(uint8_t *out, const uint8_t *in, size_t inlen) {
 
    initVersat = false; // At the end of each run, reset
 }
-
-char GetHexadecimalChar(unsigned char value){
-  if(value < 10){
-    return '0' + value;
-  } else{
-    return 'A' + (value - 10);
-  }
-}
-
-char* GetHexadecimal(const char* text,char* buffer,int str_size){
-  int i = 0;
-  unsigned char* view = (unsigned char*) text;
-  for(; i< str_size; i++){
-    buffer[i*2] = GetHexadecimalChar(view[i] / 16);
-    buffer[i*2+1] = GetHexadecimalChar(view[i] % 16);
-  }
-
-  buffer[i*2] = '\0';
-
-  return buffer;
-}
+#endif

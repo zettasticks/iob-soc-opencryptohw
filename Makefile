@@ -44,6 +44,7 @@ fpga-run:
 	make -C ../$(CORE)_V*/ fpga-run BOARD=$(BOARD)
 
 fpga-run-only:
+	cp -r software/ ../$(CORE)_V*/
 	make -C ../$(CORE)_V*/ fpga-fw-build fpga-run BOARD=$(BOARD)
 
 fpga-build:

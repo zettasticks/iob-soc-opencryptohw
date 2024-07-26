@@ -61,9 +61,15 @@ EMUL_SRC+=$(wildcard src/*_emul.c)
 #########################################
 
 build: $(UTARGETS)
-%.elf: $(TEMPLATE_LDS) $(HDR) $(SRC)
+
+iob_soc_opencryptohw_firmware.elf: $(TEMPLATE_LDS) $(HDR) $(SRC)
 	$(TOOLCHAIN_PREFIX)gcc -o $@ $(CFLAGS) $(LFLAGS) $(INCLUDES) $(SRC) $(LLIBS)
-	$(TOOLCHAIN_PREFIX)objcopy -O binary $@ $(*F).bin
+	$(TOOLCHAIN_PREFIX)objdump -d $@ > assembly.asm
+	$(TOOLCHAIN_PREFIX)objcopy -O binary $@ iob_soc_opencryptohw_firmware.bin
+
+iob_soc_opencryptohw_boot.elf: $(TEMPLATE_LDS) $(HDR) $(SRC)
+	$(TOOLCHAIN_PREFIX)gcc -o $@ $(CFLAGS) $(LFLAGS) $(INCLUDES) $(SRC) $(LLIBS)
+	$(TOOLCHAIN_PREFIX)objcopy -O binary $@ iob_soc_opencryptohw_boot.bin
 
 ifneq ($(BOARD),)
 FPGA_TOOL:=$(shell find ../hardware/fpga -name $(BOARD) | cut -d"/" -f5)

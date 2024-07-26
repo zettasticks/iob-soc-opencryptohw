@@ -116,7 +116,7 @@ void GF_mul(gf *out, gf *in0, gf *in1) {
     int mark = MarkArena(globalArena);
   
     //gf prod[ SYS_T * 2 - 1 ];
-    gf* prod = PushArray(globalArena,SYS_T * 2 - 1,gf);
+    gf* prod = PushAndZeroArray(globalArena,SYS_T * 2 - 1,gf);
   
     for (i = 0; i < SYS_T * 2 - 1; i++) {
         prod[i] = 0;

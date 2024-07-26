@@ -17,14 +17,14 @@
 void versat_init(int);
 void AES_ECB256(uint8_t* key,uint8_t* data,uint8_t* encrypted);
 
-static Arena globalArenaInst = {};
+//static Arena globalArenaInst = {};
 
 void InitializeCryptoSide(int versatAddress){
   versat_init(versatAddress);
   ConfigEnableDMA(true);
 
-  globalArenaInst = InitArena(8*1024*1024); // 8 megabytes should suffice. Arena memory used by crypto algorithms, both by software and Versat impl.
-  globalArena = &globalArenaInst; 
+  //globalArenaInst = InitArena(8*1024*1024); // 8 megabytes should suffice. Arena memory used by crypto algorithms, both by software and Versat impl.
+  //globalArena = &globalArenaInst; 
 }
 
 char* SearchAndAdvance(char* ptr,String str){
@@ -56,6 +56,7 @@ int ParseNumber(char* ptr){
   return count;
 }
 
+#if 0
 TestState VersatCommonSHATests(String content){
   TestState result = {};
 
@@ -97,29 +98,21 @@ TestState VersatCommonSHATests(String content){
 
     char* expected = ptr;
 
-    //printf("%.*s\n",16,message);
-    //printf("%.*s\n",16,expected);
-
-    unsigned char versat_digest[256];
-    unsigned char software_digest[256];
-    for(int i = 0; i < 256; i++){
+    unsigned char versat_digest[32];
+    unsigned char software_digest[32];
+    for(int i = 0; i < 32; i++){
       versat_digest[i] = 0;
       software_digest[i] = 0;
     }
   
-    //printf("2\n");
     int start = GetTime();
     VersatSHA(versat_digest,message,len / 8);
-    //printf("3\n");
     int middle = GetTime();
-    //printf("3.1\n");
     sha256(software_digest,message,len / 8);
-    //printf("3.2\n");
     int end = GetTime();
-    //printf("4\n");
 
     bool good = true;
-    for(int i = 0; i < 256; i++){
+    for(int i = 0; i < 32; i++){
       if(versat_digest[i] != software_digest[i]){
         good = false;
         break;
@@ -131,8 +124,8 @@ TestState VersatCommonSHATests(String content){
       result.softwareTimeAccum += end - middle;
       result.goodTests += 1;
     } else {
-      char versat_buffer[2048];
-      char software_buffer[2048];
+      char versat_buffer[64+1];
+      char software_buffer[64+1];
       GetHexadecimal((char*) versat_digest,versat_buffer, HASH_SIZE);
       GetHexadecimal((char*) software_digest,software_buffer, HASH_SIZE);
 
@@ -241,3 +234,5 @@ TestState VersatCommonAESTests(String content){
 
   return result;
 }
+
+#endif

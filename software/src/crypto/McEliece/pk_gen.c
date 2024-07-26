@@ -43,17 +43,17 @@ int pk_gen(unsigned char *pk, unsigned char *sk, const uint32_t *perm, int16_t *
 
     uint64_t buf[ 1 << GFBITS ];
 
-    unsigned char** mat = PushArray(globalArena,PK_NROWS,unsigned char*);
+    unsigned char** mat = PushAndZeroArray(globalArena,PK_NROWS,unsigned char*);
     for(int i = 0; i < PK_NROWS; i++){
-        mat[i] = PushArray(globalArena,SYS_N / 8,unsigned char);
+        mat[i] = PushAndZeroArray(globalArena,SYS_N / 8,unsigned char);
     }
 
     unsigned char mask;
     unsigned char b;
 
-    gf* g = PushArray(globalArena,SYS_T + 1,gf);
-    gf* L = PushArray(globalArena,SYS_N,gf); // support
-    gf* inv = PushArray(globalArena,SYS_N,gf);
+    gf* g = PushAndZeroArray(globalArena,SYS_T + 1,gf);
+    gf* L = PushAndZeroArray(globalArena,SYS_N,gf); // support
+    gf* inv = PushAndZeroArray(globalArena,SYS_N,gf);
 
     //
 

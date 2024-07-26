@@ -114,7 +114,6 @@ class iob_soc_opencryptohw(iob_soc):
             dirs_exist_ok=True,
         )
 
-        """
         dst = f"{cls.build_dir}/software/src"
 
         # Copy scripts to scripts build directory
@@ -132,7 +131,6 @@ class iob_soc_opencryptohw(iob_soc):
         for script in iob_soc_scripts:
             src_file = f"{__class__.setup_dir}/submodules/IOBSOC/scripts/{script}.py"
             shutil.copy2(src_file, dst)
-        """
 
     @classmethod
     def _setup_confs(cls, extra_confs=[]):

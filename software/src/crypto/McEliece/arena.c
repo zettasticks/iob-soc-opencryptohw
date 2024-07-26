@@ -2,7 +2,7 @@
 
 #include <stdlib.h>
 
-#include <stdio.h>
+#include "printf.h"
 
 //Arena globalArenaInst = {};
 Arena* globalArena = NULL;
@@ -30,10 +30,20 @@ void* PushBytes(Arena* arena,int size){
 }
 
 void* PushAndZeroBytes(Arena* arena,int size){
+  size = (size + 3) & (~3); // Align size
   char* ptr = PushBytes(arena,size);
 
+  memset(ptr,0,size);
+#if 0
   for (int i = 0; i < size; i++) {
     ptr[i] = 0;
+  }
+#endif
+
+  for (int i = 0; i < size; i++) {
+    if(ptr[i] != 0){
+      printf("Error on %d (%p): %d\n",i,&ptr[i],ptr[i]);
+    }
   }
 
   return ptr;

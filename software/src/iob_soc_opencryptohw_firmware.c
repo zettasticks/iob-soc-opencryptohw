@@ -1,3 +1,5 @@
+#include <stdlib.h>
+
 #include "bsp.h"
 #include "iob-timer.h"
 #include "iob-uart.h"
@@ -8,11 +10,26 @@
 #include "printf.h"
 #include <string.h>
 
+#include "arena.h"
 #include "versat_crypto_tests.h"
+
+void nist_kat_init(unsigned char *entropy_input, unsigned char *personalization_string, int security_strength);
+int VersatMcEliece(unsigned char *pk,unsigned char *sk);
 
 void clear_cache(){
   for (unsigned int i = 0; i < 10; i++)
-    asm volatile("nop");  
+    asm volatile("nop");
+
+  int size = 1024 * 32;
+  char* m = (char*) malloc(size); // Should not use malloc but some random fixed ptr in embedded. No use calling malloc since we can always read at any point in memory without worrying about memory protection.
+
+  // volatile and asm are used to make sure that gcc does not optimize away this loop that appears to do nothing
+  volatile int val = 0;
+  for(int i = 0; i < size; i += 32){
+    val += m[i];
+    __asm__ volatile("" : "+g" (val) : :);
+  }
+  free(m);
 }
 
 // Send signal by uart to receive file by ethernet
@@ -45,9 +62,15 @@ int GetTime(){
   return (int) timer_get_count();
 }
 
+static int intStatic;
+
+#include "api.h"
+
+#define Kilo(VAL) (1024 * (VAL))
+#define Mega(VAL) (1024 * Kilo(VAL))
+
 int main() {
   int test_result = 0;
-
   // init timer
   timer_init(TIMER0_BASE);
 
@@ -55,10 +78,24 @@ int main() {
   uart_init(UART0_BASE, FREQ / BAUD);
   printf_init(&uart_putc);
 
+  Arena globalArenaInst = {};
+  globalArenaInst.ptr = malloc(Mega(1));
+  globalArenaInst.allocated = Mega(1);
+  globalArena = &globalArenaInst;
+
+#if 0
+  Arena globalArenaInst = InitArena(8*1024*1024); // 8 megabytes should suffice. Arena memory used by crypto algorithms, both by software and Versat impl.
+  globalArenaInst.ptr += (1024 * 1024);
+  globalArenaInst.allocated -= (1024 * 1024);
+  globalArena = &globalArenaInst;
+#endif
+
   // init eth
   // eth_init(ETH0_BASE, &clear_cache);
   // eth_wait_phy_rst();
 
+  printf("%p\n",&intStatic);
+  printf("%p\n",&test_result);
   // test puts
   uart_puts("\n\n\nHello world!\n\n\n");
 
@@ -72,9 +109,37 @@ int main() {
   // Comment out the source files in sw_build.mk to also reduce binary size and speedup simulation.
 //#ifndef SIMULATION
   uart_puts("\n\n\nPC tests\n\n\n");
-  test_result |= VersatSHATests();
-  test_result |= VersatAESTests();
-  test_result |= VersatMcElieceTests();
+
+   unsigned char seed[49] = {};
+
+   for(int i = 0; i < 48; i++){
+      seed[i] = 0;
+   }
+
+   seed[47] = 8;
+
+  unsigned char* public_key = PushAndZeroArray(globalArena,PQCLEAN_MCELIECE348864_CLEAN_CRYPTO_PUBLICKEYBYTES + 1,unsigned char);
+  unsigned char* secret_key = PushAndZeroArray(globalArena,PQCLEAN_MCELIECE348864_CLEAN_CRYPTO_SECRETKEYBYTES + 1,unsigned char);
+
+   printf("2\n");
+   nist_kat_init(seed, NULL, 256);   
+
+   printf("3\n");
+
+   VersatMcEliece(public_key, secret_key);
+
+   printf("%.32s\n",public_key);
+   printf("%.32s\n",secret_key);
+
+  
+  //VersatMcEliece(public_key, secret_key);
+
+  //test_result |= VersatSHATests();
+  //test_result |= VersatAESTests();
+  //test_result |= VersatMcElieceTests();
+
+  //void TestMcEliece();
+  //TestMcEliece();
 //#else
 //  uart_puts("\n\n\nSim tests\n\n\n");
 //  test_result |= VersatSimpleSHATests();
