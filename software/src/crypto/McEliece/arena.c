@@ -1,6 +1,7 @@
 #include "arena.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 #include "printf.h"
 
@@ -40,11 +41,20 @@ void* PushAndZeroBytes(Arena* arena,int size){
   }
 #endif
 
+  int* asInt = (int*) ptr;
+  for (int i = 0; i < size / 4; i++) {
+    if(asInt[i] != 0){
+      printf("Error on %d (%p): %d\n",i,&asInt[i],asInt[i]);
+    }
+  }
+
+#if 0
   for (int i = 0; i < size; i++) {
     if(ptr[i] != 0){
       printf("Error on %d (%p): %d\n",i,&ptr[i],ptr[i]);
     }
   }
+#endif
 
   return ptr;
 }

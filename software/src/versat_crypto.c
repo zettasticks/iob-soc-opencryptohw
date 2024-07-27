@@ -70,7 +70,6 @@ char* GetHexadecimal(const char* text,char* buffer,int str_size){
   return buffer;
 }
 
-#if 0
 const uint8_t sbox[256] = {
    0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,
    0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0, 0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0,
@@ -298,6 +297,7 @@ void ExpandKey(uint8_t* key,bool is256){
       config->aes.key_0.selectedOutput0 = i;
       config->aes.key_0.selectedOutput1 = i + 1;
       config->aes.key_0.selectedInput = i + 2;
+
       config->aes.schedule.s.mux_0.sel = (i + 1) % 2;
       config->aes.schedule.s.mux_1.sel = (i + 1) % 2;
       config->aes.schedule.s.mux_2.sel = (i + 1) % 2;
@@ -553,15 +553,15 @@ void InitVersatSHA(){
 static size_t versat_crypto_hashblocks_sha256(const uint8_t *in, size_t inlen) {
    while (inlen >= 64) {
       ACCEL_TOP_sha_MemRead_ext_addr = (iptr) in;
-
-      //printf("A2\n");
    
       // Loads data + performs work
       RunAccelerator(1);
 
-      //printf("A3\n");
-   
+      // TODO: Make this use Start and EndAccelerator.
+
       if(!initVersat){
+         // EndAccelerator();
+
          VersatUnitWrite(TOP_sha_State_s_0_reg_addr,0,initialStateValues[0]);
          VersatUnitWrite(TOP_sha_State_s_1_reg_addr,0,initialStateValues[1]);
          VersatUnitWrite(TOP_sha_State_s_2_reg_addr,0,initialStateValues[2]);
@@ -636,4 +636,3 @@ void VersatSHA(uint8_t *out, const uint8_t *in, size_t inlen) {
 
    initVersat = false; // At the end of each run, reset
 }
-#endif

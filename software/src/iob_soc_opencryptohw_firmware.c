@@ -3,7 +3,6 @@
 #include "bsp.h"
 #include "iob-timer.h"
 #include "iob-uart.h"
-//#include "iob-eth.h"
 #include "iob_soc_opencryptohw_conf.h"
 #include "iob_soc_opencryptohw_periphs.h"
 #include "iob_soc_opencryptohw_system.h"
@@ -13,10 +12,8 @@
 #include "arena.h"
 #include "versat_crypto_tests.h"
 
-void nist_kat_init(unsigned char *entropy_input, unsigned char *personalization_string, int security_strength);
-int VersatMcEliece(unsigned char *pk,unsigned char *sk);
-
 void clear_cache(){
+#if 0
   for (unsigned int i = 0; i < 10; i++)
     asm volatile("nop");
 
@@ -30,6 +27,7 @@ void clear_cache(){
     __asm__ volatile("" : "+g" (val) : :);
   }
   free(m);
+#endif
 }
 
 // Send signal by uart to receive file by ethernet
@@ -62,10 +60,6 @@ int GetTime(){
   return (int) timer_get_count();
 }
 
-static int intStatic;
-
-#include "api.h"
-
 #define Kilo(VAL) (1024 * (VAL))
 #define Mega(VAL) (1024 * Kilo(VAL))
 
@@ -83,23 +77,8 @@ int main() {
   globalArenaInst.allocated = Mega(1);
   globalArena = &globalArenaInst;
 
-#if 0
-  Arena globalArenaInst = InitArena(8*1024*1024); // 8 megabytes should suffice. Arena memory used by crypto algorithms, both by software and Versat impl.
-  globalArenaInst.ptr += (1024 * 1024);
-  globalArenaInst.allocated -= (1024 * 1024);
-  globalArena = &globalArenaInst;
-#endif
-
-  // init eth
-  // eth_init(ETH0_BASE, &clear_cache);
-  // eth_wait_phy_rst();
-
-  printf("%p\n",&intStatic);
-  printf("%p\n",&test_result);
   // test puts
   uart_puts("\n\n\nHello world!\n\n\n");
-
-  printf("Using printf\n");
 
   InitializeCryptoSide(VERSAT0_BASE);
 
@@ -107,48 +86,16 @@ int main() {
 
   // Tests are too big and slow to perform during simulation.
   // Comment out the source files in sw_build.mk to also reduce binary size and speedup simulation.
-//#ifndef SIMULATION
+#ifndef SIMULATION
   uart_puts("\n\n\nPC tests\n\n\n");
-
-   unsigned char seed[49] = {};
-
-   for(int i = 0; i < 48; i++){
-      seed[i] = 0;
-   }
-
-   seed[47] = 8;
-
-  unsigned char* public_key = PushAndZeroArray(globalArena,PQCLEAN_MCELIECE348864_CLEAN_CRYPTO_PUBLICKEYBYTES + 1,unsigned char);
-  unsigned char* secret_key = PushAndZeroArray(globalArena,PQCLEAN_MCELIECE348864_CLEAN_CRYPTO_SECRETKEYBYTES + 1,unsigned char);
-
-   printf("2\n");
-   nist_kat_init(seed, NULL, 256);   
-
-   printf("3\n");
-
-   VersatMcEliece(public_key, secret_key);
-
-   printf("%.32s\n",public_key);
-   printf("%.32s\n",secret_key);
-
-  
-  //VersatMcEliece(public_key, secret_key);
-
-  //test_result |= VersatSHATests();
-  //test_result |= VersatAESTests();
+  test_result |= VersatSHATests();
+  test_result |= VersatAESTests();
   //test_result |= VersatMcElieceTests();
-
-  //void TestMcEliece();
-  //TestMcEliece();
-//#else
-//  uart_puts("\n\n\nSim tests\n\n\n");
-//  test_result |= VersatSimpleSHATests();
-//  test_result |= VersatSimpleAESTests();
-//#endif
-
-  // read current timer count, compute elapsed time
-  unsigned long long elapsed = timer_get_count();
-  unsigned int elapsedu = elapsed / (FREQ / 1000000);
+#else
+  uart_puts("\n\n\nSim tests\n\n\n");
+  test_result |= VersatSimpleSHATests();
+  test_result |= VersatSimpleAESTests();
+#endif
 
   uart_finish();
 }

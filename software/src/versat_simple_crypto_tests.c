@@ -2,7 +2,6 @@
 
 #include "printf.h"
 
-#if 0
 int VersatSimpleSHATests(){
   String content = STRING("LEN = 0\n"
                           "MSG = 00\n"
@@ -52,4 +51,3 @@ int VersatSimpleAESTests(){
 
   return (result.goodTests == result.tests) ? 0 : 1;
 }
-#endif

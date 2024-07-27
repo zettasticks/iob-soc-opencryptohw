@@ -24,7 +24,6 @@ String PushFileFromEthernet(const char* filepath){
   return (String){.str=testFile,.size=file_size};
 }
 
-#if 0
 int VersatSHATests(){
   int mark = MarkArena(globalArena);
   String content = PushFileFromEthernet("../../software/KAT/SHA256ShortMsg.rsp");
@@ -72,7 +71,6 @@ int VersatAESTests(){
   PopArena(globalArena,mark);
   return (result.goodTests == result.tests) ? 0 : 1;
 }
-#endif
 
 int VersatMcElieceTests(){
   int mark = MarkArena(globalArena);
@@ -152,8 +150,8 @@ int VersatMcElieceTests(){
     // Software only implementation is slow and we are already comparing to KAT anyway and so, for McEliece, we skipping software implementation test of McEliece.
     //PQCLEAN_MCELIECE348864_CLEAN_crypto_kem_keypair(public_key, secret_key);
 
-    unsigned char* public_key_hex = PushArray(globalArena,PQCLEAN_MCELIECE348864_CLEAN_CRYPTO_PUBLICKEYBYTES * 2 + 1,char);
-    unsigned char* secret_key_hex = PushArray(globalArena,PQCLEAN_MCELIECE348864_CLEAN_CRYPTO_SECRETKEYBYTES * 2 + 1,char);
+    unsigned char* public_key_hex = PushArray(globalArena,PQCLEAN_MCELIECE348864_CLEAN_CRYPTO_PUBLICKEYBYTES * 2 + 1,unsigned char);
+    unsigned char* secret_key_hex = PushArray(globalArena,PQCLEAN_MCELIECE348864_CLEAN_CRYPTO_SECRETKEYBYTES * 2 + 1,unsigned char);
 
     GetHexadecimal(public_key,public_key_hex,PQCLEAN_MCELIECE348864_CLEAN_CRYPTO_PUBLICKEYBYTES);
     GetHexadecimal(secret_key,secret_key_hex,PQCLEAN_MCELIECE348864_CLEAN_CRYPTO_SECRETKEYBYTES);

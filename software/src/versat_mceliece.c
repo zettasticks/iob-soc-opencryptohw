@@ -371,7 +371,7 @@ int Versat_pk_gen(unsigned char *pk, unsigned char *sk, const uint32_t *perm, in
 
                 VersatMcElieceLoop1(mat[k],mask,first);
 
-                // We could fetch the value from Versat, but it's easier to calculate it CPU side.
+                // We could fetch the value from Versat, but it's easier to calculate it CPU side since it is only one.
                 mat[row][i] ^= mat[k][i] & mask;
                 first = false;
             }
@@ -432,7 +432,7 @@ int VersatMcEliece
     //unsigned char r[ SYS_N / 8 + (1 << GFBITS)*sizeof(uint32_t) + SYS_T * 2 + 32 ] = {0};
     unsigned char *rp, *skp;
 
-    memset(seed,64,sizeof(unsigned char) * 33);
+    //memset(seed,64,sizeof(unsigned char) * 33);
 
     printf("SEED: %c%c%c%c%c%c%c%c\n",seed[0],seed[1],seed[2],seed[3],seed[4],seed[5],seed[6],seed[7]);
 
