@@ -33,12 +33,6 @@ The program runs the cryptographic algorithms and compares to a Known Answer Tes
 
 The result of the tests can be checked manually from terminal
 
-### Clean environment
-To clean the workspace after PC emulation:
-```
-make clean
-```
-
 * * *
 
 # RISCV Emulation
@@ -47,51 +41,22 @@ with:
 ```Make
 make clean
 # Test with all supported simulators
-make test-sim
+make sim-test
 # Test with a specific simulator
-make sim-test SIMULATOR=icarus
-make sim-test SIMULATOR=verilator
+make sim-run SIMULATOR=icarus
+make sim-run SIMULATOR=verilator
 ```
-
-### Clean environment
-To clean the workspace after the RISCV emulation:
-```
-make test-sim-clean
-```
-
-### Requirements/Setup
-RISCV emulation requires:
-- PC Emulation requirements
-- RISCV toolchain
-    - Add the RISCV toolchain to you `PATH` variable in `$HOME/.bashrc`:
-    ```
-    export RISCV=/path/to/riscv/bin
-    export PATH=$RISCV:$PATH
-    ```
-- Verilog simulator, for example: 
-    - [icarus verilog](https://github.com/steveicarus/iverilog)  
-    - [verilator](https://github.com/verilator/verilator)
 
 # FPGA Execution
 The system can be tested on FPGA with:
 ```
-make test-fpga
+make fpga-test
 ```
 
-The results can be manually checked in the terminal and in
-`hardware/fpga/<tool>/<board>/ethernet.log`, where `<tool>` is the tool used
-for synthesis and `<board>` is the board directory name.
-
-The system has been tested with the `AES-KU040-DB-G` board from Xilinx. In that
-case the results can be found in: `hardware/fpga/vivado/AES-KU040-DB-G`. 
-
-### Clean environment
-To clean the workspace after the FPGA execution:
-```
-make test-fpga-clean
-```
+The results can be manually checked in the terminal.
 
 ### Requirements/Setup [CHANGE]
+
 FPGA execution requires:
 - Supported FPGA board
 - Setup environment for FPGA execution
