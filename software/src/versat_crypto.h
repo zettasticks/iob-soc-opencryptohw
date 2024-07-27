@@ -19,8 +19,10 @@ void VersatSHA(uint8_t *out, const uint8_t *in, size_t inlen);
 #define AES_KEY_SIZE (32)
 
 void InitVersatAES();
-void VersatAES();
 void InitAES();
+void VersatAES();
+
+void AES_ECB256(uint8_t* key,uint8_t* plaintext,uint8_t* result);
 
 // McEliece
 int VersatMcEliece(unsigned char *pk,unsigned char *sk);

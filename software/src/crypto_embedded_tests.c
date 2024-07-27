@@ -1,21 +1,18 @@
-#include "versat_crypto_tests.h"
+#include "crypto_tests.h"
 
 #include <stdbool.h>
 
 #include "printf.h"
 #include "iob-uart.h"
 
+#include "versat_crypto.h"
+
 // McEliece
 #include "api.h"
 #include "arena.h"
 void nist_kat_init(unsigned char *entropy_input, unsigned char *personalization_string, int security_strength);
-int HexStringToHex(char* buffer,const char* str);
-int VersatMcEliece(unsigned char *pk,unsigned char *sk);
-char* GetHexadecimal(const char* text,char* buffer,int str_size);
-void AES_ECB256(const uint8_t* key,const uint8_t* plaintext,uint8_t* result);
 
-// TODO: Move this to a platform file layer or something.
-String PushFileFromEthernet(const char* filepath){
+String PushFile(const char* filepath){
   char* start = PushArray(globalArena,0,char);
   uint32_t file_size = uart_recvfile((char*) filepath,start);
   char* testFile = PushArray(globalArena,file_size + 1,char);
@@ -26,7 +23,7 @@ String PushFileFromEthernet(const char* filepath){
 
 int VersatSHATests(){
   int mark = MarkArena(globalArena);
-  String content = PushFileFromEthernet("../../software/KAT/SHA256ShortMsg.rsp");
+  String content = PushFile("../../software/KAT/SHA256ShortMsg.rsp");
 
   TestState result = VersatCommonSHATests(content);
 
@@ -50,7 +47,7 @@ int VersatSHATests(){
 
 int VersatAESTests(){
   int mark = MarkArena(globalArena);
-  String content = PushFileFromEthernet("../../software/KAT/AESECB256.rsp");
+  String content = PushFile("../../software/KAT/AESECB256.rsp");
 
   TestState result = VersatCommonAESTests(content);
 
@@ -80,7 +77,7 @@ int VersatMcElieceTests(){
 
   int versatTimeAccum = 0;
 
-  String content = PushFileFromEthernet("../../software/KAT/McElieceRound4kat_kem_short.rsp");
+  String content = PushFile("../../software/KAT/McElieceRound4kat_kem_short.rsp");
   printf("Content size: %d\n",content.size);
 
   char* ptr = content.str;

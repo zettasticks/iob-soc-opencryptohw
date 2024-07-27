@@ -10,24 +10,9 @@
 #include <string.h>
 
 #include "arena.h"
-#include "versat_crypto_tests.h"
+#include "crypto_tests.h"
 
 void clear_cache(){
-#if 0
-  for (unsigned int i = 0; i < 10; i++)
-    asm volatile("nop");
-
-  int size = 1024 * 32;
-  char* m = (char*) malloc(size); // Should not use malloc but some random fixed ptr in embedded. No use calling malloc since we can always read at any point in memory without worrying about memory protection.
-
-  // volatile and asm are used to make sure that gcc does not optimize away this loop that appears to do nothing
-  volatile int val = 0;
-  for(int i = 0; i < size; i += 32){
-    val += m[i];
-    __asm__ volatile("" : "+g" (val) : :);
-  }
-  free(m);
-#endif
 }
 
 // Send signal by uart to receive file by ethernet
@@ -36,7 +21,6 @@ uint32_t uart_recvfile_ethernet(const char *file_name) {
   uart_puts(UART_PROGNAME);
   uart_puts(": requesting to receive file by ethernet\n");
 
-  uart_puts("Before\n");
   // send file receive by ethernet request
   uart_putc(0x13);
 
@@ -73,11 +57,10 @@ int main() {
   printf_init(&uart_putc);
 
   Arena globalArenaInst = {};
-  globalArenaInst.ptr = malloc(Mega(1));
   globalArenaInst.allocated = Mega(1);
+  globalArenaInst.ptr = malloc(globalArenaInst.allocated);
   globalArena = &globalArenaInst;
 
-  // test puts
   uart_puts("\n\n\nHello world!\n\n\n");
 
   InitializeCryptoSide(VERSAT0_BASE);
@@ -85,7 +68,6 @@ int main() {
   uart_puts("\n\n\nInitialized crypto side\n\n\n");
 
   // Tests are too big and slow to perform during simulation.
-  // Comment out the source files in sw_build.mk to also reduce binary size and speedup simulation.
 #ifndef SIMULATION
   uart_puts("\n\n\nPC tests\n\n\n");
   test_result |= VersatSHATests();
@@ -93,8 +75,8 @@ int main() {
   //test_result |= VersatMcElieceTests();
 #else
   uart_puts("\n\n\nSim tests\n\n\n");
-  test_result |= VersatSimpleSHATests();
-  test_result |= VersatSimpleAESTests();
+  test_result |= VersatSHASimulationTests();
+  test_result |= VersatAESSimulationTests();
 #endif
 
   uart_finish();

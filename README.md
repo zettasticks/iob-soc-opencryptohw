@@ -4,8 +4,6 @@ SoC to run SHA, AES and McEliece programs on a RISC-V processor, with or without
 acceleration using the VERSAT2.0 Coarse Grained Reconfigurable Array as a
 hardware accelerator.
 
-[Need to update instructions from py change.]
-
 # Setup
 Clone the repository and the submodules with:
 ```
@@ -15,38 +13,39 @@ or using the url:
 ```
 git clone --recursive https://github.com/IObundle/iob-soc-opencryptohw.git
 ```
+
+### Requirements
+
+Opencryptohw uses Nix environments to simplify dependency management. User must install 
+nix-shell and any of the commands present in the next sections will automatically download 
+any dependency required by opencryptohw. The only exception is the Vivado and Quartus tools
+which are required for the FPGA targets and are not available through nix. These must be installed
+and configured by the user.
+
 * * *
 # PC Emulation
 The iob-soc-opencryptohw system can build and run an environment for PC with:
 ```
-make pc-emul-run
+make pc-emul
 ```
-This target performs the Short Message Test for Byte-Oriented `sha256()` 
-implementations from the 
-[NIST Cryptograpphic Algorithm Validation
-Program](https://csrc.nist.gov/projects/cryptographic-algorithm-validation-program/secure-hashing).
 
-The test vectors are a set of 65 messages from 0 to 64 byte length. 
+The program runs the cryptographic algorithms and compares to a Known Answer Tests (KAT).
 
-The implementation output can be checked manually from terminal
+The result of the tests can be checked manually from terminal
 
 ### Clean environment
 To clean the workspace after PC emulation:
 ```
-make pc-emul-clean
+make clean
 ```
-### Requirements
-PC emulation program requires:
-- Git
-- Make
-- gcc
-- Python 3.6+
 
 * * *
+
 # RISCV Emulation
 The iob-soc-opencryptohw system can be emulated using a verilog simulator like icarus 
 with:
 ```Make
+make clean
 # Test with all supported simulators
 make test-sim
 # Test with a specific simulator

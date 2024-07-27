@@ -1,8 +1,6 @@
 #ifndef INCLUDED_UNIT_CONFIGURATION
 #define INCLUDED_UNIT_CONFIGURATION
 
-#include "printf.h" 
-
 static void IntSet(volatile void* buffer,int value,int byteSize){
    volatile int* asInt = (int*) buffer;
 
