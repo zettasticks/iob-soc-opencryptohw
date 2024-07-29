@@ -13,6 +13,7 @@
 
 #define nullptr 0
 
+// Constants used by SHA.
 static uint32_t initialStateValues[] = {0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19};
 static uint32_t kConstants0[] = {0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174};
 static uint32_t kConstants1[] = {0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967};
@@ -22,7 +23,7 @@ static uint32_t kConstants3[] = {0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x3
 static uint32_t* kConstants[4] = {kConstants0,kConstants1,kConstants2,kConstants3};
 
 // GLOBALS
-static bool runInitialized = false;
+static bool runInitialized = false; // The first accelerator run loads the data, only the next runs actual process valid data. Need to keep track of when the "actual" run starts
 
 static void store_bigendian_32(uint8_t *x, uint32_t u) {
    x[3] = (uint8_t) u;
@@ -34,12 +35,12 @@ static void store_bigendian_32(uint8_t *x, uint32_t u) {
    x[0] = (uint8_t) u;
 }
 
+// Initialize SHA, the only difference between runs is the pointer for the input
 void InitVersatSHA(){
    CryptoAlgosConfig* config = (CryptoAlgosConfig*) accelConfig;
    SHAConfig* sha = &config->sha;
 
    *sha = (SHAConfig){0};
-//   ActivateMergedAccelerator(SHA);
    ConfigureSimpleVRead(&sha->MemRead,16,nullptr);
 
    ACCEL_Constants_mem_iterA = 1;
@@ -67,7 +68,7 @@ void InitVersatSHA(){
 
 static size_t versat_crypto_hashblocks_sha256(const uint8_t *in, size_t inlen) {
    while (inlen >= 64) {
-      ACCEL_TOP_sha_MemRead_ext_addr = (iptr) in;
+      ACCEL_TOP_sha_MemRead_ext_addr = (iptr) in; // Need to change input source
    
       // Loads data + performs work
       RunAccelerator(1);
@@ -75,6 +76,7 @@ static size_t versat_crypto_hashblocks_sha256(const uint8_t *in, size_t inlen) {
       if(!runInitialized){
          runInitialized = true;
 
+         // Only load state after doing the first run, since the first run is the one that loads valid data and only the following runs do the actual work.
          VersatUnitWrite(TOP_sha_State_s_0_reg_addr,0,initialStateValues[0]);
          VersatUnitWrite(TOP_sha_State_s_1_reg_addr,0,initialStateValues[1]);
          VersatUnitWrite(TOP_sha_State_s_2_reg_addr,0,initialStateValues[2]);
@@ -134,8 +136,9 @@ void VersatSHA(uint8_t *out, const uint8_t *in, size_t inlen) {
       versat_crypto_hashblocks_sha256(padded, 128);
    }
 
-   RunAccelerator(1);
+   RunAccelerator(1); // One last run to flush all the valid data that is still inside the accelerator.
 
+   // Read the values from the state registers. It is the output of the SHA algorithm
    store_bigendian_32(&out[0*4],(uint32_t) VersatUnitRead(TOP_sha_State_s_0_reg_addr,0));
    store_bigendian_32(&out[1*4],(uint32_t) VersatUnitRead(TOP_sha_State_s_1_reg_addr,0));
    store_bigendian_32(&out[2*4],(uint32_t) VersatUnitRead(TOP_sha_State_s_2_reg_addr,0));
@@ -145,5 +148,5 @@ void VersatSHA(uint8_t *out, const uint8_t *in, size_t inlen) {
    store_bigendian_32(&out[6*4],(uint32_t) VersatUnitRead(TOP_sha_State_s_6_reg_addr,0));
    store_bigendian_32(&out[7*4],(uint32_t) VersatUnitRead(TOP_sha_State_s_7_reg_addr,0));
 
-   runInitialized = false; // At the end of each run, reset
+   runInitialized = false; // At the end of each run, reset the runInitialized flag, since we have finished this "SHA run"
 }

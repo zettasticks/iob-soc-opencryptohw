@@ -236,12 +236,11 @@ int Versat_pk_gen(unsigned char *pk, unsigned char *sk, const uint32_t *perm, in
     int i, j, k;
     int row, c;
 
+    unsigned char mask;
+    unsigned char b;
+
     int mark = MarkArena(globalArena);
 
-    printf("SK:%02x%02x%02x%02x%02x%02x%02x%02x\n",sk[0],sk[1],sk[2],sk[3],sk[4],sk[5],sk[6],sk[7]);
-    printf("PE:%02x%02x%02x%02x%02x%02x%02x%02x\n",perm[0],perm[1],perm[2],perm[3],perm[4],perm[5],perm[6],perm[7]);
-    printf("PI:%02x%02x%02x%02x%02x%02x%02x%02x\n",pi[0],pi[1],pi[2],pi[3],pi[4],pi[5],pi[6],pi[7]);
-    
     // Init needed values for versat later on.  
     CryptoAlgosConfig* topConfig = (CryptoAlgosConfig*) accelConfig;
     vec = (McElieceConfig*) &topConfig->eliece;
@@ -264,9 +263,6 @@ int Versat_pk_gen(unsigned char *pk, unsigned char *sk, const uint32_t *perm, in
     for(int i = 0; i < PK_NROWS; i++){
         mat[i] = PushArray(globalArena,SYS_N / 8,unsigned char); // This guarantees that each row is properly aligned to a 32 bit boundary.
     }
-
-    unsigned char mask;
-    unsigned char b;
 
     gf* g = PushArray(globalArena,SYS_T + 1,gf);
     gf* L = PushArray(globalArena,SYS_N,gf); // support
@@ -359,8 +355,7 @@ int Versat_pk_gen(unsigned char *pk, unsigned char *sk, const uint32_t *perm, in
             uint32_t *out_int = CAST_PTR(uint32_t*,mat[row]);
             EndAccelerator();
 
-            //printf("%02x%02x%02x%02x%02x%02x%02x%02x\n",mat[row][0],mat[row][1],mat[row][2],mat[row][3],mat[row][4],mat[row][5],mat[row][6],mat[row][7]);
-
+            // Store row to be processed inside accelerator memory
             VersatLoadRow(out_int);
             bool first = true;
             for (k = row + 1; k < PK_NROWS; k++) {
@@ -369,15 +364,15 @@ int Versat_pk_gen(unsigned char *pk, unsigned char *sk, const uint32_t *perm, in
                 mask &= 1;
                 mask = -mask;
 
-                VersatMcElieceLoop1(mat[k],mask,first);
+                VersatMcElieceLoop1(mat[k],mask,first); // Process all the following rows to change the value of memory
 
-                // We could fetch the value from Versat, but it's easier to calculate it CPU side since it is only one.
+                // We could fetch this value from the accelerator Versat, but it's easier to calculate it since it is only one.
                 mat[row][i] ^= mat[k][i] & mask;
                 first = false;
             }
 
             // Last run, use valid data to compute last operation
-            VersatMcElieceLoop1(mat[PK_NROWS - 1],0,false); // TODO: Have a proper function instead of sending a "fake" adress
+            VersatMcElieceLoop1(mat[PK_NROWS - 1],0,false);
 
             EndAccelerator();
 
@@ -386,12 +381,7 @@ int Versat_pk_gen(unsigned char *pk, unsigned char *sk, const uint32_t *perm, in
                return -1;
             }
 
-            ReadRow(out_int);
-
-            //printf("%02x%02x%02x%02x%02x%02x%02x%02x\n",mat[row][0],mat[row][1],mat[row][2],mat[row][3],mat[row][4],mat[row][5],mat[row][6],mat[row][7]);
-
-            //uart_finish();
-            //exit(0);
+            ReadRow(out_int); // Read value from memory. mat[k] is now good
 
             int index = 0;
             for (k = 0; k < PK_NROWS; k++) {
@@ -400,7 +390,7 @@ int Versat_pk_gen(unsigned char *pk, unsigned char *sk, const uint32_t *perm, in
                     mask &= 1;
                     mask = -mask;
 
-                    VersatMcElieceLoop2(mat,index,k,row,mask);
+                    VersatMcElieceLoop2(mat,index,k,row,mask); // Change the other rows based on the value of mat[k]
                     index += 1;
                 }
             }

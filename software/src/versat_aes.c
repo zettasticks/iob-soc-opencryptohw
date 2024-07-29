@@ -16,6 +16,8 @@
 
 static CryptoAlgosAddr aesAddr;
 
+// Sbox and Reverse SBox are lookup tables defined by AES.
+
 const uint8_t sbox[256] = {
    0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,
    0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0, 0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0,
@@ -51,6 +53,10 @@ static const uint8_t rsbox[256] = {
   0x60, 0x51, 0x7f, 0xa9, 0x19, 0xb5, 0x4a, 0x0d, 0x2d, 0xe5, 0x7a, 0x9f, 0x93, 0xc9, 0x9c, 0xef,
   0xa0, 0xe0, 0x3b, 0x4d, 0xae, 0x2a, 0xf5, 0xb0, 0xc8, 0xeb, 0xbb, 0x3c, 0x83, 0x53, 0x99, 0x61,
   0x17, 0x2b, 0x04, 0x7e, 0xba, 0x77, 0xd6, 0x26, 0xe1, 0x69, 0x14, 0x63, 0x55, 0x21, 0x0c, 0x7d };
+
+// The AES algorithm requires to perform polynomial multiplications over a Galois field.
+// While possible to do in hardware, it is easier to instantiate lookup tables since the 
+// multiplication is only done with constants. 
 
 const uint8_t mul2[] = {
    0x00,0x02,0x04,0x06,0x08,0x0a,0x0c,0x0e,0x10,0x12,0x14,0x16,0x18,0x1a,0x1c,0x1e,
@@ -166,6 +172,8 @@ const uint8_t mul14[] = {
    0xd7,0xd9,0xcb,0xc5,0xef,0xe1,0xf3,0xfd,0xa7,0xa9,0xbb,0xb5,0x9f,0x91,0x83,0x8d
 };
 
+// Bunch of functions to fill lookup tables with their values.
+
 void FillLookupTable(LookupTableAddr addr,const uint8_t* mem,int size){
    VersatMemoryCopy(addr.addr,mem,size * sizeof(uint8_t));
 }
@@ -214,6 +222,8 @@ void FillInvMixColumns(InvMixColumnsAddr addr){
 inline void FillInvMainRound(FullAESRoundsAddr addr){
    FillInvMixColumns(addr.invMixColumns);
 }
+
+// Performs key expansion and stores the expanded key directly inside the accelerator.
 
 void ExpandKey(uint8_t* key,bool is256){
   static  const int rcon[] = {0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80,0x1b,0x36};
@@ -271,6 +281,8 @@ void ExpandKey(uint8_t* key,bool is256){
   config->aes.key_0.disabled = 1;
 }
 
+// Generic encrypt function. LastAddition is needed to implement CTR. Every other mode passes null.
+
 void Encrypt(uint8_t* data,uint8_t* result,uint8_t* lastAddition,bool is256,bool isCBC){
   int numberRounds = 10;
   if(is256){
@@ -324,6 +336,8 @@ void Encrypt(uint8_t* data,uint8_t* result,uint8_t* lastAddition,bool is256,bool
   }
 }
 
+// Generic decrypt function. 
+
 void Decrypt(uint8_t* data,uint8_t* result,uint8_t* lastAddition,bool is256){
   int numberRounds = 10;
   if(is256){
@@ -370,6 +384,10 @@ void Decrypt(uint8_t* data,uint8_t* result,uint8_t* lastAddition,bool is256){
     result[ii] = VersatUnitRead(view[ii].addr,0);
   }
 }
+
+// This is the common part of VersatAES.
+// Need to call InitAES after if going to encrypt.
+// Need to call InitInvAES after if going to decrypt.
 
 void InitVersatAES(){
    aesAddr = (CryptoAlgosAddr) ACCELERATOR_TOP_ADDR_INIT;
@@ -421,12 +439,7 @@ void PrintResult(uint8_t* buffer){
    }   
 }
 
-//#include "versat_crypto_tests.h"
-
-//CBC - Result of ciphertext is xor for next block
-
 void LoadIV(uint8_t* iv){
-   CryptoAlgosAddr addr = ACCELERATOR_TOP_ADDR_INIT;
    CryptoAlgosConfig* config = (CryptoAlgosConfig*) accelConfig;
 
    RegAddr* view = &addr.aes.lastResult_0;
@@ -500,6 +513,9 @@ void CTR(uint8_t* key,uint8_t* counter,uint8_t* data,uint8_t* encrypted,uint8_t*
    ExpandKey(key,is256);
    Encrypt(counterBuffer,encrypted,data,is256,false);
 
+   // Counter needs to be increment by one, but counter is 128 bits and we do not support this in embedded. 
+   // Since we are dealing with a simple example, just increment a 32 bit number (the last 4 bytes of the 16 byte number) after fixing endianess and turning it back.
+   // NOTE: This would not work for the general case. The general case would need to implement an actual 128 bit addition.
    uint32_t* view = ((uint32_t*) ((void*)(counterBuffer + 12)));
 
    *view = Swap(Swap(*view) + 1);
@@ -509,12 +525,12 @@ void CTR(uint8_t* key,uint8_t* counter,uint8_t* data,uint8_t* encrypted,uint8_t*
    memcpy(counterBuffer,counter,16 * sizeof(uint8_t));
    Encrypt(counterBuffer,decrypted,encrypted,is256,false);
 
-   *view = Swap(Swap(*view) + 1);
+   *view = Swap(Swap(*view) + 1); // Same logic here
 
    Encrypt(counterBuffer,decrypted + 16,encrypted + 16,is256,false);
 }
 
-void DoOneRound(CryptoType type,const char* key,const char* iv,const char* plaintext,const char* expected){
+void TestOneMode(CryptoType type,const char* key,const char* iv,const char* plaintext,const char* expected){
    uint8_t keyBuffer[32];
    uint8_t dataBuffer[32];
    uint8_t encrypted[32];
@@ -570,24 +586,21 @@ void DoOneRound(CryptoType type,const char* key,const char* iv,const char* plain
    printf("\n");
 }
 
+// Simple function that tests all the modes for simple examples
+
 void VersatAES(){
    const char* key128 = "2b7e151628aed2a6abf7158809cf4f3c";
-
-   //                    vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-   //                                                    vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
    const char* key256 = "603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4";
-   //                       vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-   //                                                       vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
    const char* plaintext = "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e51";
    const char* iv = "000102030405060708090a0b0c0d0e0f";
    const char* counter = "f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff";
 
-   DoOneRound(CryptoType_ECB128,key128,NULL,plaintext,"3ad77bb40d7a3660a89ecaf32466ef97 f5d3d58503b9699de785895a96fdbaaf");
-   DoOneRound(CryptoType_ECB256,key256,NULL,plaintext,"f3eed1bdb5d2a03c064b5a7e3db181f8 591ccb10d410ed26dc5ba74a31362870");
+   TestOneMode(CryptoType_ECB128,key128,NULL,plaintext,"3ad77bb40d7a3660a89ecaf32466ef97 f5d3d58503b9699de785895a96fdbaaf");
+   TestOneMode(CryptoType_ECB256,key256,NULL,plaintext,"f3eed1bdb5d2a03c064b5a7e3db181f8 591ccb10d410ed26dc5ba74a31362870");
 
-   DoOneRound(CryptoType_CBC128,key128,iv,plaintext,"7649abac8119b246cee98e9b12e9197d 5086cb9b507219ee95db113a917678b2");
-   DoOneRound(CryptoType_CBC256,key256,iv,plaintext,"f58c4c04d6e5f1ba779eabfb5f7bfbd6 9cfc4e967edb808d679f777bc6702c7d");
+   TestOneMode(CryptoType_CBC128,key128,iv,plaintext,"7649abac8119b246cee98e9b12e9197d 5086cb9b507219ee95db113a917678b2");
+   TestOneMode(CryptoType_CBC256,key256,iv,plaintext,"f58c4c04d6e5f1ba779eabfb5f7bfbd6 9cfc4e967edb808d679f777bc6702c7d");
 
-   DoOneRound(CryptoType_CTR128,key128,counter,plaintext,"874d6191b620e3261bef6864990db6ce 9806f66b7970fdff8617187bb9fffdff");
-   DoOneRound(CryptoType_CTR256,key256,counter,plaintext,"601ec313775789a5b7a7f504bbf3d228 f443e3ca4d62b59aca84e990cacaf5c5");
+   TestOneMode(CryptoType_CTR128,key128,counter,plaintext,"874d6191b620e3261bef6864990db6ce 9806f66b7970fdff8617187bb9fffdff");
+   TestOneMode(CryptoType_CTR256,key256,counter,plaintext,"601ec313775789a5b7a7f504bbf3d228 f443e3ca4d62b59aca84e990cacaf5c5");
 }
