@@ -1,9 +1,8 @@
-#include "versat_crypto_tests.h"
+#include "crypto_tests.h"
 
 #include "printf.h"
 
-#if 0
-int VersatSimpleSHATests(){
+int VersatSHASimulationTests(){
   String content = STRING("LEN = 0\n"
                           "MSG = 00\n"
                           "MD = E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855\n"
@@ -14,7 +13,6 @@ int VersatSimpleSHATests(){
                           "MSG = 5A86B737EAEA8EE976A0A24DA63E7ED7EEFAD18A101C1211E2B3650C5187C2A8A650547208251F6D4237E661C7BF4C77F335390394C37FA1A9F9BE836AC28509\n"
                           "MD = 42E61E174FBB3897D6DD6CEF3DD2802FE67B331953B06114A65C772859DFC1AA\n");
 
-  printf("1\n");
   TestState result = VersatCommonSHATests(content);
 
   if(result.earlyExit){
@@ -27,7 +25,7 @@ int VersatSimpleSHATests(){
   return (result.goodTests == result.tests) ? 0 : 1;
 }
 
-int VersatSimpleAESTests(){
+int VersatAESSimulationTests(){
   String content = STRING("COUNT = 7\n"
                            "KEY = 85405C4F0EBBE8F29228F02F1FF184E2F5E7857E8933C2A1D08F61ECB9B68111\n"
                            "PLAINTEXT = 0F5321DB6FD9D816D88E28183A739D90\n"
@@ -52,4 +50,3 @@ int VersatSimpleAESTests(){
 
   return (result.goodTests == result.tests) ? 0 : 1;
 }
-#endif

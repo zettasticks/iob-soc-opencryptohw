@@ -6,6 +6,7 @@
 
 #include "unitConfiguration.h"
 
+#include "iob-uart.h"
 #include "printf.h"
 
 #undef  ARRAY_SIZE
@@ -15,62 +16,8 @@
 
 static CryptoAlgosAddr aesAddr;
 
-void clear_cache();
+// Sbox and Reverse SBox are lookup tables defined by AES.
 
-static char HexToInt(char ch){
-   if('0' <= ch && ch <= '9'){
-      return (ch - '0');
-   } else if('a' <= ch && ch <= 'f'){
-      return ch - 'a' + 10;
-   } else if('A' <= ch && ch <= 'F'){
-      return ch - 'A' + 10;
-   } else {
-      return 0x7f;
-   }
-}
-
-// Make sure that buffer is capable of storing the whole thing. Returns number of bytes inserted
-int HexStringToHex(char* buffer,const char* str){
-   int inserted = 0;
-   for(int i = 0; ; i += 2){
-      char upper = HexToInt(str[i]);
-      char lower = HexToInt(str[i+1]);
-
-      if(upper >= 16 || lower >= 16){
-         if(upper < 16){ // Upper is good but lower is not
-            printf("Warning: HexString was not divisible by 2\n");
-         }
-         break;
-      }
-
-      buffer[inserted++] = upper * 16 + lower;
-   }
-
-   return inserted;
-}
-
-char GetHexadecimalChar(unsigned char value){
-  if(value < 10){
-    return '0' + value;
-  } else{
-    return 'A' + (value - 10);
-  }
-}
-
-char* GetHexadecimal(const char* text,char* buffer,int str_size){
-  int i = 0;
-  unsigned char* view = (unsigned char*) text;
-  for(; i< str_size; i++){
-    buffer[i*2] = GetHexadecimalChar(view[i] / 16);
-    buffer[i*2+1] = GetHexadecimalChar(view[i] % 16);
-  }
-
-  buffer[i*2] = '\0';
-
-  return buffer;
-}
-
-#if 0
 const uint8_t sbox[256] = {
    0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,
    0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0, 0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0,
@@ -106,6 +53,10 @@ static const uint8_t rsbox[256] = {
   0x60, 0x51, 0x7f, 0xa9, 0x19, 0xb5, 0x4a, 0x0d, 0x2d, 0xe5, 0x7a, 0x9f, 0x93, 0xc9, 0x9c, 0xef,
   0xa0, 0xe0, 0x3b, 0x4d, 0xae, 0x2a, 0xf5, 0xb0, 0xc8, 0xeb, 0xbb, 0x3c, 0x83, 0x53, 0x99, 0x61,
   0x17, 0x2b, 0x04, 0x7e, 0xba, 0x77, 0xd6, 0x26, 0xe1, 0x69, 0x14, 0x63, 0x55, 0x21, 0x0c, 0x7d };
+
+// The AES algorithm requires to perform polynomial multiplications over a Galois field.
+// While possible to do in hardware, it is easier to instantiate lookup tables since the 
+// multiplication is only done with constants. 
 
 const uint8_t mul2[] = {
    0x00,0x02,0x04,0x06,0x08,0x0a,0x0c,0x0e,0x10,0x12,0x14,0x16,0x18,0x1a,0x1c,0x1e,
@@ -221,6 +172,8 @@ const uint8_t mul14[] = {
    0xd7,0xd9,0xcb,0xc5,0xef,0xe1,0xf3,0xfd,0xa7,0xa9,0xbb,0xb5,0x9f,0x91,0x83,0x8d
 };
 
+// Bunch of functions to fill lookup tables with their values.
+
 void FillLookupTable(LookupTableAddr addr,const uint8_t* mem,int size){
    VersatMemoryCopy(addr.addr,mem,size * sizeof(uint8_t));
 }
@@ -269,6 +222,8 @@ void FillInvMixColumns(InvMixColumnsAddr addr){
 inline void FillInvMainRound(FullAESRoundsAddr addr){
    FillInvMixColumns(addr.invMixColumns);
 }
+
+// Performs key expansion and stores the expanded key directly inside the accelerator.
 
 void ExpandKey(uint8_t* key,bool is256){
   static  const int rcon[] = {0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80,0x1b,0x36};
@@ -326,6 +281,8 @@ void ExpandKey(uint8_t* key,bool is256){
   config->aes.key_0.disabled = 1;
 }
 
+// Generic encrypt function. LastAddition is needed to implement CTR. Every other mode passes null.
+
 void Encrypt(uint8_t* data,uint8_t* result,uint8_t* lastAddition,bool is256,bool isCBC){
   int numberRounds = 10;
   if(is256){
@@ -379,6 +336,8 @@ void Encrypt(uint8_t* data,uint8_t* result,uint8_t* lastAddition,bool is256,bool
   }
 }
 
+// Generic decrypt function. 
+
 void Decrypt(uint8_t* data,uint8_t* result,uint8_t* lastAddition,bool is256){
   int numberRounds = 10;
   if(is256){
@@ -425,6 +384,10 @@ void Decrypt(uint8_t* data,uint8_t* result,uint8_t* lastAddition,bool is256){
     result[ii] = VersatUnitRead(view[ii].addr,0);
   }
 }
+
+// This is the common part of VersatAES.
+// Need to call InitAES after if going to encrypt.
+// Need to call InitInvAES after if going to decrypt.
 
 void InitVersatAES(){
    aesAddr = (CryptoAlgosAddr) ACCELERATOR_TOP_ADDR_INIT;
@@ -476,12 +439,7 @@ void PrintResult(uint8_t* buffer){
    }   
 }
 
-#include "versat_crypto_tests.h"
-
-//CBC - Result of ciphertext is xor for next block
-
 void LoadIV(uint8_t* iv){
-   CryptoAlgosAddr addr = ACCELERATOR_TOP_ADDR_INIT;
    CryptoAlgosConfig* config = (CryptoAlgosConfig*) accelConfig;
 
    RegAddr* view = &addr.aes.lastResult_0;
@@ -492,148 +450,157 @@ void LoadIV(uint8_t* iv){
    config->aes.lastResult_0.disabled = 1;
 }
 
+typedef enum{
+   CryptoType_ECB128,
+   CryptoType_ECB256,
+   CryptoType_CBC128,
+   CryptoType_CBC256,
+   CryptoType_CTR128,
+   CryptoType_CTR256
+} CryptoType;
+
 void AES_ECB256(uint8_t* key,uint8_t* data,uint8_t* encrypted){
    ExpandKey(key,true);
 
    Encrypt(data,encrypted,NULL,true,false);
 }
 
-static uint32_t initialStateValues[] = {0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19};
-static uint32_t kConstants0[] = {0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174};
-static uint32_t kConstants1[] = {0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967};
-static uint32_t kConstants2[] = {0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070};
-static uint32_t kConstants3[] = {0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2};
+void ECB(uint8_t* key,uint8_t* data,uint8_t* encrypted,uint8_t* decrypted,bool is256){
+   InitAES();
 
-static uint32_t* kConstants[4] = {kConstants0,kConstants1,kConstants2,kConstants3};
+   ExpandKey(key,is256);
 
-// GLOBALS
-static bool initVersat = false;
+   Encrypt(data,encrypted,NULL,is256,false);
+   Encrypt(data + 16,encrypted + 16,NULL,is256,false);
 
-static void store_bigendian_32(uint8_t *x, uint32_t u) {
-   x[3] = (uint8_t) u;
-   u >>= 8;
-   x[2] = (uint8_t) u;
-   u >>= 8;
-   x[1] = (uint8_t) u;
-   u >>= 8;
-   x[0] = (uint8_t) u;
+   InitInvAES();
+   Decrypt(encrypted,decrypted,NULL,is256);
+   Decrypt(encrypted + 16,decrypted + 16,NULL,is256);
 }
 
-void InitVersatSHA(){
-   CryptoAlgosConfig* config = (CryptoAlgosConfig*) accelConfig;
-   SHAConfig* sha = &config->sha;
+void CBC(uint8_t* key,uint8_t* iv,uint8_t* data,uint8_t* encrypted,uint8_t* decrypted,bool is256){
+   InitAES();
 
-   *sha = (SHAConfig){0};
-//   ActivateMergedAccelerator(SHA);
-   ConfigureSimpleVRead(&sha->MemRead,16,nullptr);
+   ExpandKey(key,is256);
+   LoadIV(iv);
 
-   ACCEL_Constants_mem_iterA = 1;
-   ACCEL_Constants_mem_incrA = 1;
-   ACCEL_Constants_mem_perA = 16;
-   ACCEL_Constants_mem_dutyA = 16;
-   ACCEL_Constants_mem_startA = 0;
-   ACCEL_Constants_mem_shiftA = 0;
+   Encrypt(data,encrypted,NULL,is256,true);
+   Encrypt(data + 16,encrypted + 16,NULL,is256,true);
 
-   for(int ii = 0; ii < 16; ii++){
-      VersatUnitWrite(TOP_sha_cMem0_mem_addr,ii,kConstants[0][ii]);
-   }
-   for(int ii = 0; ii < 16; ii++){
-      VersatUnitWrite(TOP_sha_cMem1_mem_addr,ii,kConstants[1][ii]);
-   }
-   for(int ii = 0; ii < 16; ii++){
-      VersatUnitWrite(TOP_sha_cMem2_mem_addr,ii,kConstants[2][ii]);
-   }
-   for(int ii = 0; ii < 16; ii++){
-      VersatUnitWrite(TOP_sha_cMem3_mem_addr,ii,kConstants[3][ii]);
-   }
+   InitInvAES();
 
-   ACCEL_TOP_sha_Swap_enabled = 1;
+   LoadIV(iv);
+   Decrypt(encrypted,decrypted,NULL,is256);
+   LoadIV(encrypted);
+   Decrypt(encrypted + 16,decrypted + 16,NULL,is256);
 }
 
-static size_t versat_crypto_hashblocks_sha256(const uint8_t *in, size_t inlen) {
-   while (inlen >= 64) {
-      ACCEL_TOP_sha_MemRead_ext_addr = (iptr) in;
+uint32_t Swap(uint32_t val){
+   uint32_t res = ((val & 0x000000FF) << 24) |
+                  ((val & 0x0000FF00) << 8)  |
+                  ((val & 0x00FF0000) >> 8)  |
+                  ((val & 0xFF000000) >> 24);
 
-      //printf("A2\n");
-   
-      // Loads data + performs work
-      RunAccelerator(1);
-
-      //printf("A3\n");
-   
-      if(!initVersat){
-         VersatUnitWrite(TOP_sha_State_s_0_reg_addr,0,initialStateValues[0]);
-         VersatUnitWrite(TOP_sha_State_s_1_reg_addr,0,initialStateValues[1]);
-         VersatUnitWrite(TOP_sha_State_s_2_reg_addr,0,initialStateValues[2]);
-         VersatUnitWrite(TOP_sha_State_s_3_reg_addr,0,initialStateValues[3]);
-         VersatUnitWrite(TOP_sha_State_s_4_reg_addr,0,initialStateValues[4]);
-         VersatUnitWrite(TOP_sha_State_s_5_reg_addr,0,initialStateValues[5]);
-         VersatUnitWrite(TOP_sha_State_s_6_reg_addr,0,initialStateValues[6]);
-         VersatUnitWrite(TOP_sha_State_s_7_reg_addr,0,initialStateValues[7]);
-         initVersat = true;
-      }
-
-      in += 64;
-      inlen -= 64;
-   }
-
-   return inlen;
+   return res;
 }
 
-void VersatSHA(uint8_t *out, const uint8_t *in, size_t inlen) {
-   uint8_t padded[128];
-   uint64_t bytes = inlen;
+void CTR(uint8_t* key,uint8_t* counter,uint8_t* data,uint8_t* encrypted,uint8_t* decrypted,bool is256){
+   uint8_t counterBuffer[16];
 
-   //printf("A1\n");
-   versat_crypto_hashblocks_sha256(in, inlen);
-   in += inlen;
-   inlen &= 63;
-   in -= inlen;
+   InitAES();
+   memcpy(counterBuffer,counter,16 * sizeof(uint8_t));
 
-   for (size_t i = 0; i < inlen; ++i) {
-      padded[i] = in[i];
-   }
-   padded[inlen] = 0x80;
+   ExpandKey(key,is256);
+   Encrypt(counterBuffer,encrypted,data,is256,false);
 
-   if (inlen < 56) {
-      for (size_t i = inlen + 1; i < 56; ++i) {
-         padded[i] = 0;
-      
-    }  padded[56] = (uint8_t) (bytes >> 53);
-      padded[57] = (uint8_t) (bytes >> 45);
-      padded[58] = (uint8_t) (bytes >> 37);
-      padded[59] = (uint8_t) (bytes >> 29);
-      padded[60] = (uint8_t) (bytes >> 21);
-      padded[61] = (uint8_t) (bytes >> 13);
-      padded[62] = (uint8_t) (bytes >> 5);
-      padded[63] = (uint8_t) (bytes << 3);
-      versat_crypto_hashblocks_sha256(padded, 64);
-   } else {
-      for (size_t i = inlen + 1; i < 120; ++i) {
-         padded[i] = 0;
-      }
-      padded[120] = (uint8_t) (bytes >> 53);
-      padded[121] = (uint8_t) (bytes >> 45);
-      padded[122] = (uint8_t) (bytes >> 37);
-      padded[123] = (uint8_t) (bytes >> 29);
-      padded[124] = (uint8_t) (bytes >> 21);
-      padded[125] = (uint8_t) (bytes >> 13);
-      padded[126] = (uint8_t) (bytes >> 5);
-      padded[127] = (uint8_t) (bytes << 3);
-      versat_crypto_hashblocks_sha256(padded, 128);
-   }
+   // Counter needs to be increment by one, but counter is 128 bits and we do not support this in embedded. 
+   // Since we are dealing with a simple example, just increment a 32 bit number (the last 4 bytes of the 16 byte number) after fixing endianess and turning it back.
+   // NOTE: This would not work for the general case. The general case would need to implement an actual 128 bit addition.
+   uint32_t* view = ((uint32_t*) ((void*)(counterBuffer + 12)));
 
-   RunAccelerator(1);
+   *view = Swap(Swap(*view) + 1);
 
-   store_bigendian_32(&out[0*4],(uint32_t) VersatUnitRead(TOP_sha_State_s_0_reg_addr,0));
-   store_bigendian_32(&out[1*4],(uint32_t) VersatUnitRead(TOP_sha_State_s_1_reg_addr,0));
-   store_bigendian_32(&out[2*4],(uint32_t) VersatUnitRead(TOP_sha_State_s_2_reg_addr,0));
-   store_bigendian_32(&out[3*4],(uint32_t) VersatUnitRead(TOP_sha_State_s_3_reg_addr,0));
-   store_bigendian_32(&out[4*4],(uint32_t) VersatUnitRead(TOP_sha_State_s_4_reg_addr,0));
-   store_bigendian_32(&out[5*4],(uint32_t) VersatUnitRead(TOP_sha_State_s_5_reg_addr,0));
-   store_bigendian_32(&out[6*4],(uint32_t) VersatUnitRead(TOP_sha_State_s_6_reg_addr,0));
-   store_bigendian_32(&out[7*4],(uint32_t) VersatUnitRead(TOP_sha_State_s_7_reg_addr,0));
+   Encrypt(counterBuffer,encrypted + 16,data + 16,is256,false);
 
-   initVersat = false; // At the end of each run, reset
+   memcpy(counterBuffer,counter,16 * sizeof(uint8_t));
+   Encrypt(counterBuffer,decrypted,encrypted,is256,false);
+
+   *view = Swap(Swap(*view) + 1); // Same logic here
+
+   Encrypt(counterBuffer,decrypted + 16,encrypted + 16,is256,false);
 }
-#endif
+
+void TestOneMode(CryptoType type,const char* key,const char* iv,const char* plaintext,const char* expected){
+   uint8_t keyBuffer[32];
+   uint8_t dataBuffer[32];
+   uint8_t encrypted[32];
+   uint8_t decrypted[32];
+   uint8_t ivBuffer[16];
+
+   HexStringToHex((char*) keyBuffer,key);
+   HexStringToHex((char*) dataBuffer,plaintext);
+
+   switch(type){
+   case CryptoType_CBC128:
+   case CryptoType_CBC256:
+   case CryptoType_CTR128:
+   case CryptoType_CTR256: HexStringToHex((char*) ivBuffer,iv);
+   default: break;
+   }
+
+   switch(type){
+   case CryptoType_ECB128: ECB(keyBuffer,dataBuffer,encrypted,decrypted,false); break;
+   case CryptoType_ECB256: ECB(keyBuffer,dataBuffer,encrypted,decrypted,true); break;
+   case CryptoType_CBC128: CBC(keyBuffer,ivBuffer,dataBuffer,encrypted,decrypted,false); break;
+   case CryptoType_CBC256: CBC(keyBuffer,ivBuffer,dataBuffer,encrypted,decrypted,true); break;
+   case CryptoType_CTR128: CTR(keyBuffer,ivBuffer,dataBuffer,encrypted,decrypted,false); break;
+   case CryptoType_CTR256: CTR(keyBuffer,ivBuffer,dataBuffer,encrypted,decrypted,true); break;
+   }
+
+   const char* name = NULL;
+   switch(type){
+   case CryptoType_ECB128: name = "ECB128"; break;
+   case CryptoType_ECB256: name = "ECB256"; break;
+   case CryptoType_CBC128: name = "CBC128"; break;
+   case CryptoType_CBC256: name = "CBC256"; break;
+   case CryptoType_CTR128: name = "CTR128"; break;
+   case CryptoType_CTR256: name = "CTR256"; break;
+   }
+
+   printf("%s\n",name);
+   printf("Encrypted:");
+   PrintResult(encrypted);
+   printf(" ");
+   PrintResult(encrypted + 16);
+   printf("\n");
+   printf(" Expected:%s",expected);
+   printf("\n");
+   printf("\n");
+   printf("Decrypted:");
+   PrintResult(decrypted);
+   printf(" ");
+   PrintResult(decrypted + 16);
+   printf("\n");
+   printf(" Expected:%.32s",plaintext);
+   printf(" %s",plaintext + 32);
+   printf("\n");
+}
+
+// Simple function that tests all the modes for simple examples
+
+void VersatAES(){
+   const char* key128 = "2b7e151628aed2a6abf7158809cf4f3c";
+   const char* key256 = "603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4";
+   const char* plaintext = "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e51";
+   const char* iv = "000102030405060708090a0b0c0d0e0f";
+   const char* counter = "f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff";
+
+   TestOneMode(CryptoType_ECB128,key128,NULL,plaintext,"3ad77bb40d7a3660a89ecaf32466ef97 f5d3d58503b9699de785895a96fdbaaf");
+   TestOneMode(CryptoType_ECB256,key256,NULL,plaintext,"f3eed1bdb5d2a03c064b5a7e3db181f8 591ccb10d410ed26dc5ba74a31362870");
+
+   TestOneMode(CryptoType_CBC128,key128,iv,plaintext,"7649abac8119b246cee98e9b12e9197d 5086cb9b507219ee95db113a917678b2");
+   TestOneMode(CryptoType_CBC256,key256,iv,plaintext,"f58c4c04d6e5f1ba779eabfb5f7bfbd6 9cfc4e967edb808d679f777bc6702c7d");
+
+   TestOneMode(CryptoType_CTR128,key128,counter,plaintext,"874d6191b620e3261bef6864990db6ce 9806f66b7970fdff8617187bb9fffdff");
+   TestOneMode(CryptoType_CTR256,key256,counter,plaintext,"601ec313775789a5b7a7f504bbf3d228 f443e3ca4d62b59aca84e990cacaf5c5");
+}

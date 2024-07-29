@@ -5,7 +5,7 @@ ROOT_DIR ?=..
 # Local embedded makefile settings for custom bootloader and firmware targets.
 
 ifneq ($(shell grep -s "#define SIMULATION" src/bsp.h),)
-SIMULATION=0
+SIMULATION=1
 endif
 
 #Function to obtain parameter named $(1) in verilog header file located in $(2)
@@ -45,15 +45,17 @@ IOB_SOC_OPENCRYPTOHW_FW_SRC=src/iob_soc_opencryptohw_firmware.S
 IOB_SOC_OPENCRYPTOHW_FW_SRC+=src/iob_soc_opencryptohw_firmware.c
 IOB_SOC_OPENCRYPTOHW_FW_SRC+=src/printf.c
 
-IOB_SOC_OPENCRYPTOHW_FW_SRC+=src/versat_crypto.c
+IOB_SOC_OPENCRYPTOHW_FW_SRC+=src/versat_aes.c
+IOB_SOC_OPENCRYPTOHW_FW_SRC+=src/versat_sha.c
 IOB_SOC_OPENCRYPTOHW_FW_SRC+=src/crypto/aes.c
-IOB_SOC_OPENCRYPTOHW_FW_SRC+=src/versat_crypto_common_tests.c
+IOB_SOC_OPENCRYPTOHW_FW_SRC+=src/crypto_common_tests.c
+
 ifeq ($(SIMULATION),1)
-IOB_SOC_OPENCRYPTOHW_FW_SRC+=src/versat_simple_crypto_tests.c
+IOB_SOC_OPENCRYPTOHW_FW_SRC+=src/crypto_simulation_tests.c
 IOB_SOC_OPENCRYPTOHW_FW_SRC+=$(wildcard src/crypto/McEliece/arena.c)
 IOB_SOC_OPENCRYPTOHW_FW_SRC+=$(wildcard src/crypto/McEliece/common/sha2.c)
 else
-IOB_SOC_OPENCRYPTOHW_FW_SRC+=src/versat_crypto_tests.c
+IOB_SOC_OPENCRYPTOHW_FW_SRC+=src/crypto_embedded_tests.c
 IOB_SOC_OPENCRYPTOHW_FW_SRC+=src/versat_mceliece.c
 IOB_SOC_OPENCRYPTOHW_FW_SRC+=$(wildcard src/crypto/McEliece/*.c)
 IOB_SOC_OPENCRYPTOHW_FW_SRC+=$(wildcard src/crypto/McEliece/common/*.c)
@@ -91,15 +93,17 @@ EMUL_SRC+=src/printf.c
 
 EMUL_INCLUDES = $(IOB_SOC_OPENCRYPTOHW_INCLUDES)
 
-EMUL_SRC+=src/versat_crypto.c
+EMUL_SRC+=src/versat_aes.c
+EMUL_SRC+=src/versat_sha.c
 EMUL_SRC+=src/crypto/aes.c
-EMUL_SRC+=src/versat_crypto_common_tests.c
+EMUL_SRC+=src/crypto_common_tests.c
+
 ifeq ($(SIMULATION),1)
-EMUL_SRC+=src/versat_simple_crypto_tests.c
+EMUL_SRC+=src/crypto_simulation_tests.c
 EMUL_SRC+=$(wildcard src/crypto/McEliece/arena.c)
 EMUL_SRC+=$(wildcard src/crypto/McEliece/common/sha2.c)
 else
-EMUL_SRC+=src/versat_crypto_tests.c
+EMUL_SRC+=src/crypto_embedded_tests.c
 EMUL_SRC+=src/versat_mceliece.c
 EMUL_SRC+=$(wildcard src/crypto/McEliece/*.c)
 EMUL_SRC+=$(wildcard src/crypto/McEliece/common/*.c)
@@ -107,4 +111,3 @@ endif
 
 # PERIPHERAL SOURCES
 EMUL_SRC+=$(wildcard src/iob-*.c)
-

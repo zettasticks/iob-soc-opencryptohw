@@ -1,21 +1,18 @@
-#include "versat_crypto_tests.h"
+#include "crypto_tests.h"
 
 #include <stdbool.h>
 
 #include "printf.h"
 #include "iob-uart.h"
 
+#include "versat_crypto.h"
+
 // McEliece
 #include "api.h"
 #include "arena.h"
 void nist_kat_init(unsigned char *entropy_input, unsigned char *personalization_string, int security_strength);
-int HexStringToHex(char* buffer,const char* str);
-int VersatMcEliece(unsigned char *pk,unsigned char *sk);
-char* GetHexadecimal(const char* text,char* buffer,int str_size);
-void AES_ECB256(const uint8_t* key,const uint8_t* plaintext,uint8_t* result);
 
-// TODO: Move this to a platform file layer or something.
-String PushFileFromEthernet(const char* filepath){
+String PushFile(const char* filepath){
   char* start = PushArray(globalArena,0,char);
   uint32_t file_size = uart_recvfile((char*) filepath,start);
   char* testFile = PushArray(globalArena,file_size + 1,char);
@@ -24,10 +21,9 @@ String PushFileFromEthernet(const char* filepath){
   return (String){.str=testFile,.size=file_size};
 }
 
-#if 0
 int VersatSHATests(){
   int mark = MarkArena(globalArena);
-  String content = PushFileFromEthernet("../../software/KAT/SHA256ShortMsg.rsp");
+  String content = PushFile("../../software/KAT/SHA256ShortMsg.rsp");
 
   TestState result = VersatCommonSHATests(content);
 
@@ -51,7 +47,7 @@ int VersatSHATests(){
 
 int VersatAESTests(){
   int mark = MarkArena(globalArena);
-  String content = PushFileFromEthernet("../../software/KAT/AESECB256.rsp");
+  String content = PushFile("../../software/KAT/AESECB256.rsp");
 
   TestState result = VersatCommonAESTests(content);
 
@@ -72,7 +68,6 @@ int VersatAESTests(){
   PopArena(globalArena,mark);
   return (result.goodTests == result.tests) ? 0 : 1;
 }
-#endif
 
 int VersatMcElieceTests(){
   int mark = MarkArena(globalArena);
@@ -82,8 +77,7 @@ int VersatMcElieceTests(){
 
   int versatTimeAccum = 0;
 
-  String content = PushFileFromEthernet("../../software/KAT/McElieceRound4kat_kem_short.rsp");
-  printf("Content size: %d\n",content.size);
+  String content = PushFile("../../software/KAT/McElieceRound4kat_kem_short.rsp");
 
   char* ptr = content.str;
   int goodTests = 0;
@@ -142,18 +136,15 @@ int VersatMcElieceTests(){
 
     nist_kat_init(seed, NULL, 256);
 
-    printf("Before\n");
-
     int start = GetTime();
     VersatMcEliece(public_key, secret_key);
     int end = GetTime();
 
-    printf("After\n");
     // Software only implementation is slow and we are already comparing to KAT anyway and so, for McEliece, we skipping software implementation test of McEliece.
     //PQCLEAN_MCELIECE348864_CLEAN_crypto_kem_keypair(public_key, secret_key);
 
-    unsigned char* public_key_hex = PushArray(globalArena,PQCLEAN_MCELIECE348864_CLEAN_CRYPTO_PUBLICKEYBYTES * 2 + 1,char);
-    unsigned char* secret_key_hex = PushArray(globalArena,PQCLEAN_MCELIECE348864_CLEAN_CRYPTO_SECRETKEYBYTES * 2 + 1,char);
+    unsigned char* public_key_hex = PushArray(globalArena,PQCLEAN_MCELIECE348864_CLEAN_CRYPTO_PUBLICKEYBYTES * 2 + 1,unsigned char);
+    unsigned char* secret_key_hex = PushArray(globalArena,PQCLEAN_MCELIECE348864_CLEAN_CRYPTO_SECRETKEYBYTES * 2 + 1,unsigned char);
 
     GetHexadecimal(public_key,public_key_hex,PQCLEAN_MCELIECE348864_CLEAN_CRYPTO_PUBLICKEYBYTES);
     GetHexadecimal(secret_key,secret_key_hex,PQCLEAN_MCELIECE348864_CLEAN_CRYPTO_SECRETKEYBYTES);

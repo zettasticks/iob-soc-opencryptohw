@@ -16,8 +16,6 @@ ifeq ($(INIT_MEM),1)
 SETUP_ARGS += INIT_MEM
 endif
 
-
-
 setup:
 	make build-setup SETUP_ARGS="$(SETUP_ARGS)"
 
