@@ -78,7 +78,6 @@ int VersatMcElieceTests(){
   int versatTimeAccum = 0;
 
   String content = PushFile("../../software/KAT/McElieceRound4kat_kem_short.rsp");
-  printf("Content size: %d\n",content.size);
 
   char* ptr = content.str;
   int goodTests = 0;
@@ -137,13 +136,10 @@ int VersatMcElieceTests(){
 
     nist_kat_init(seed, NULL, 256);
 
-    printf("Before\n");
-
     int start = GetTime();
     VersatMcEliece(public_key, secret_key);
     int end = GetTime();
 
-    printf("After\n");
     // Software only implementation is slow and we are already comparing to KAT anyway and so, for McEliece, we skipping software implementation test of McEliece.
     //PQCLEAN_MCELIECE348864_CLEAN_crypto_kem_keypair(public_key, secret_key);
 

@@ -13,31 +13,7 @@
 #include "crypto_tests.h"
 
 void clear_cache(){
-}
-
-// Send signal by uart to receive file by ethernet
-uint32_t uart_recvfile_ethernet(const char *file_name) {
-
-  uart_puts(UART_PROGNAME);
-  uart_puts(": requesting to receive file by ethernet\n");
-
-  // send file receive by ethernet request
-  uart_putc(0x13);
-
-  // send file name (including end of string)
-  uart_puts(file_name);
-  uart_putc(0);
-
-  // receive file size
-  uint32_t file_size = uart_getc();
-  file_size |= ((uint32_t)uart_getc()) << 8;
-  file_size |= ((uint32_t)uart_getc()) << 16;
-  file_size |= ((uint32_t)uart_getc()) << 24;
-
-  // send ACK before receiving file
-  uart_putc(ACK);
-
-  return file_size;
+  // No need to clear cache for pico since cache is write-through
 }
 
 int GetTime(){
@@ -56,13 +32,15 @@ int main() {
   uart_init(UART0_BASE, FREQ / BAUD);
   printf_init(&uart_putc);
 
+  // Allocates an arena, basically a stack allocator where we can push and pop memory on command.
   Arena globalArenaInst = {};
-  globalArenaInst.allocated = Mega(1);
+  globalArenaInst.allocated = Mega(1); // We need at least half a megabyte for McEliece
   globalArenaInst.ptr = malloc(globalArenaInst.allocated);
   globalArena = &globalArenaInst;
 
   uart_puts("\n\n\nHello world!\n\n\n");
 
+  // Initializes Versat
   InitializeCryptoSide(VERSAT0_BASE);
 
   uart_puts("\n\n\nInitialized crypto side\n\n\n");
@@ -72,7 +50,7 @@ int main() {
   uart_puts("\n\n\nPC tests\n\n\n");
   test_result |= VersatSHATests();
   test_result |= VersatAESTests();
-  //test_result |= VersatMcElieceTests();
+  test_result |= VersatMcElieceTests();
 #else
   uart_puts("\n\n\nSim tests\n\n\n");
   test_result |= VersatSHASimulationTests();

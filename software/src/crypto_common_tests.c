@@ -10,20 +10,17 @@
 #include "crypto/sha2.h"
 
 #include "arena.h"
-
 #include "string.h"
 
 void versat_init(int);
 void AES_ECB256(uint8_t* key,uint8_t* data,uint8_t* encrypted);
 
-//static Arena globalArenaInst = {};
-
 void InitializeCryptoSide(int versatAddress){
   versat_init(versatAddress);
-  ConfigEnableDMA(true);
+  ConfigEnableDMA(true); // No problem using DMA in embedded.
 }
 
-char* SearchAndAdvance(char* ptr,String str){
+static char* SearchAndAdvance(char* ptr,String str){
   char* firstChar = strstr(ptr,str.str);
   if(firstChar == NULL){
     return NULL;
@@ -33,7 +30,7 @@ char* SearchAndAdvance(char* ptr,String str){
   return advance;
 }
 
-int ParseNumber(char* ptr){
+static int ParseNumber(char* ptr){
   int count = 0;
 
   while(ptr != NULL){
@@ -52,59 +49,7 @@ int ParseNumber(char* ptr){
   return count;
 }
 
-static char GetHexadecimalChar(unsigned char value){
-  if(value < 10){
-    return '0' + value;
-  } else{
-    return 'A' + (value - 10);
-  }
-}
-
-char* GetHexadecimal(const char* text,char* buffer,int str_size){
-  int i = 0;
-  unsigned char* view = (unsigned char*) text;
-  for(; i< str_size; i++){
-    buffer[i*2] = GetHexadecimalChar(view[i] / 16);
-    buffer[i*2+1] = GetHexadecimalChar(view[i] % 16);
-  }
-
-  buffer[i*2] = '\0';
-
-  return buffer;
-}
-
-static char HexToInt(char ch){
-   if('0' <= ch && ch <= '9'){
-      return (ch - '0');
-   } else if('a' <= ch && ch <= 'f'){
-      return ch - 'a' + 10;
-   } else if('A' <= ch && ch <= 'F'){
-      return ch - 'A' + 10;
-   } else {
-      return 0x7f;
-   }
-}
-
-// Make sure that buffer is capable of storing the whole thing. Returns number of bytes inserted
-int HexStringToHex(char* buffer,const char* str){
-   int inserted = 0;
-   for(int i = 0; ; i += 2){
-      char upper = HexToInt(str[i]);
-      char lower = HexToInt(str[i+1]);
-
-      if(upper >= 16 || lower >= 16){
-         if(upper < 16){ // Upper is good but lower is not
-            printf("Warning: HexString was not divisible by 2\n");
-         }
-         break;
-      }
-
-      buffer[inserted++] = upper * 16 + lower;
-   }
-
-   return inserted;
-}
-
+// Parses content and performs each test found
 TestState VersatCommonSHATests(String content){
   TestState result = {};
 
@@ -192,6 +137,7 @@ TestState VersatCommonSHATests(String content){
   return result;
 }
 
+// Parses content and performs each test found
 TestState VersatCommonAESTests(String content){
   TestState result = {};
 
@@ -285,4 +231,57 @@ TestState VersatCommonAESTests(String content){
   PopArena(globalArena,mark);
 
   return result;
+}
+
+static char GetHexadecimalChar(unsigned char value){
+  if(value < 10){
+    return '0' + value;
+  } else{
+    return 'A' + (value - 10);
+  }
+}
+
+char* GetHexadecimal(const char* text,char* buffer,int str_size){
+  int i = 0;
+  unsigned char* view = (unsigned char*) text;
+  for(; i< str_size; i++){
+    buffer[i*2] = GetHexadecimalChar(view[i] / 16);
+    buffer[i*2+1] = GetHexadecimalChar(view[i] % 16);
+  }
+
+  buffer[i*2] = '\0';
+
+  return buffer;
+}
+
+static char HexToInt(char ch){
+   if('0' <= ch && ch <= '9'){
+      return (ch - '0');
+   } else if('a' <= ch && ch <= 'f'){
+      return ch - 'a' + 10;
+   } else if('A' <= ch && ch <= 'F'){
+      return ch - 'A' + 10;
+   } else {
+      return 0x7f;
+   }
+}
+
+// Make sure that buffer is capable of storing the whole thing. Returns number of bytes inserted
+int HexStringToHex(char* buffer,const char* str){
+   int inserted = 0;
+   for(int i = 0; ; i += 2){
+      char upper = HexToInt(str[i]);
+      char lower = HexToInt(str[i+1]);
+
+      if(upper >= 16 || lower >= 16){
+         if(upper < 16){ // Upper is good but lower is not
+            printf("Warning: HexString was not divisible by 2\n");
+         }
+         break;
+      }
+
+      buffer[inserted++] = upper * 16 + lower;
+   }
+
+   return inserted;
 }
