@@ -10,7 +10,21 @@
 // McEliece
 #include "api.h"
 #include "arena.h"
+
+/**
+ * This function was obtained from the PQClean repository. It is used when running McEliece because only a small portion of McEliece is speedup by Versat.
+ * The rest of the code was taken directly from PQClean.
+ * \brief nist function that initializes random number generation
+ */
+
 void nist_kat_init(unsigned char *entropy_input, unsigned char *personalization_string, int security_strength);
+
+/**
+ * Allocates memory by pushing to the global arena.
+ * \brief Transfers file and returns content.
+ * \param filepath C-Style string that contains the filepath on the host side
+ * \return returns String with the content of the file.
+ */
 
 String PushFile(const char* filepath){
   char* start = PushArray(globalArena,0,char);

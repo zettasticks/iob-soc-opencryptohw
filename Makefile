@@ -59,4 +59,8 @@ test-all:
 	make fpga-test BOARD=AES-KU040-DB-G
 	make clean && make setup && make -C ../iob_soc_opencryptohw_V*/ doc-test
 
-.PHONY: sim-test fpga-test test-all
+doc:
+	mkdir ../iob_soc_opencryptohw_V0.70
+	nix-shell --run "doxygen"
+
+.PHONY: sim-test fpga-test test-all doc

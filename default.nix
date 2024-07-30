@@ -14,5 +14,6 @@ pkgs.mkShell {
   # Include the original packages
   buildInputs = with pkgs; origShell.buildInputs ++ [
     (callPackage ./submodules/VERSAT/versat.nix {})
+    doxygen
   ];
 }

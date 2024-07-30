@@ -12,10 +12,6 @@
 #include "arena.h"
 #include "crypto_tests.h"
 
-void clear_cache(){
-  // No need to clear cache for pico since cache is write-through
-}
-
 int GetTime(){
   return (int) timer_get_count();
 }
@@ -23,8 +19,17 @@ int GetTime(){
 #define Kilo(VAL) (1024 * (VAL))
 #define Mega(VAL) (1024 * Kilo(VAL))
 
+/**
+ * Initializes the peripherals and calls the functions that exercise the algorithms testcases.
+ * McEliece tests are disabled in simulation since they would take a huge amount of time running. It would be faster to compile and run on a FPGA.
+ * \brief Program entry point
+ * \return creates a file named test.log with "Test passed!" on success, with "Test failed!" on error
+ */
 int main() {
   int test_result = 0;
+  char pass_string[] = "Test passed!";
+  char fail_string[] = "Test failed!";
+
   // init timer
   timer_init(TIMER0_BASE);
 
@@ -56,6 +61,12 @@ int main() {
   test_result |= VersatSHASimulationTests();
   test_result |= VersatAESSimulationTests();
 #endif
+
+  if(test_result){
+    uart_sendfile("test.log", strlen(fail_string), fail_string);
+  } else {
+    uart_sendfile("test.log", strlen(pass_string), pass_string);
+  }
 
   uart_finish();
 }
