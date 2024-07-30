@@ -57,6 +57,12 @@ To run FPGA emulation, type:
 make fpga-run
 ```
 
+To create a software user guide in ../iob_soc_opencryptohw_V0.80/doc/html/index.html, type:
+
+```bash
+make doc-build
+```
+
 More targets can be found in the Makefile.
 
 
@@ -64,7 +70,7 @@ More targets can be found in the Makefile.
 
 Versat is a tool that generates custom-made accelerators following the dataflow paradigm. The accelerator used in IOb-SoC-OpenCryptoHW is specified in the Versat native specification language and can be found in the file ./versatSpec.txt. The majority of units used are either primary or complex default Versat units. Other units have been customized for this project and can be found in hardware\src\units.
 
-Given that the IOb-Versat already explains how Versat works and there are illustrative examples in the IOb-SoC-Versat repository, this tutorial will only explain how the three crypto algorithms are implemented. All accelerators are described in the file ./versatSpec.txt, and the firmware is in the directory software/src. A software manual is delivered in the document directory.
+Given that the IOb-Versat already explains how Versat works and there are illustrative examples in the IOb-SoC-Versat repository, this tutorial will only explain how the three crypto algorithms are implemented. All accelerators are described in the file ./versatSpec.txt, and the firmware is in the directory software/src. A software manual is delivered in the document/html build directory.
 
 ## SHA-256
 
