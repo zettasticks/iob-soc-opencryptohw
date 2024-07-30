@@ -114,7 +114,6 @@ int VersatMcElieceTests(){
 
     unsigned char seed[49];
     HexStringToHex(seed,ptr);
-    printf("%.96s\n",ptr);
 
     ptr = SearchAndAdvance(ptr,STRING("PK = "));
     if(ptr == NULL){
@@ -153,9 +152,6 @@ int VersatMcElieceTests(){
     int start = GetTime();
     VersatMcEliece(public_key, secret_key);
     int end = GetTime();
-
-    // Software only implementation is slow and we are already comparing to KAT anyway and so, for McEliece, we skipping software implementation test of McEliece.
-    //PQCLEAN_MCELIECE348864_CLEAN_crypto_kem_keypair(public_key, secret_key);
 
     unsigned char* public_key_hex = PushArray(globalArena,PQCLEAN_MCELIECE348864_CLEAN_CRYPTO_PUBLICKEYBYTES * 2 + 1,unsigned char);
     unsigned char* secret_key_hex = PushArray(globalArena,PQCLEAN_MCELIECE348864_CLEAN_CRYPTO_SECRETKEYBYTES * 2 + 1,unsigned char);

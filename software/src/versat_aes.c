@@ -512,7 +512,7 @@ typedef enum{
 void AES_ECB256(uint8_t* key,uint8_t* plaintext,uint8_t* result){
    ExpandKey(key,true);
 
-   Encrypt(data,encrypted,NULL,true,false);
+   Encrypt(plaintext,result,NULL,true,false);
 }
 
 /**
@@ -588,7 +588,7 @@ uint32_t Swap(uint32_t val){
 void CTR(uint8_t* key,uint8_t* counter,uint8_t* data,uint8_t* encrypted,uint8_t* decrypted,bool is256){
    uint8_t counterBuffer[16];
 
-   InitAES();
+   InitAESEncryption();
    memcpy(counterBuffer,counter,16 * sizeof(uint8_t));
 
    ExpandKey(key,is256);

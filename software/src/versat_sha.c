@@ -36,7 +36,7 @@ void InitVersatSHA(){
    SHAConfig* sha = &config->sha;
 
    *sha = (SHAConfig){0};
-   ConfigureSimpleVRead(&sha->MemRead,16,nullptr);
+   ConfigureSimpleVRead(&sha->MemRead,16,NULL);
 
    ACCEL_Constants_mem_iterA = 1;
    ACCEL_Constants_mem_incrA = 1;
