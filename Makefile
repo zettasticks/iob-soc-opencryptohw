@@ -23,9 +23,11 @@ setup_pc:
 	+nix-shell --run "make build-setup SETUP_ARGS='$(SETUP_ARGS) PC_EMUL'"
 
 pc-emul:
+	nix-shell --run "make clean"
 	nix-shell --run "make setup_pc && make -C ../iob_soc_o* pc-emul-run"
 
 sim-run:
+	nix-shell --run "make clean"
 	nix-shell --run "make setup INIT_MEM=1 SIMULATOR=$(SIMULATOR) VCD=$(VCD) && make -C ../iob_soc_o* sim-run INIT_MEM=1 SIMULATOR=$(SIMULATOR) VCD=$(VCD)"
 
 sim-test:
