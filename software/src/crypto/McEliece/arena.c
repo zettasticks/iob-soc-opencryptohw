@@ -35,26 +35,6 @@ void* PushAndZeroBytes(Arena* arena,int size){
   char* ptr = PushBytes(arena,size);
 
   memset(ptr,0,size);
-#if 0
-  for (int i = 0; i < size; i++) {
-    ptr[i] = 0;
-  }
-#endif
-
-  int* asInt = (int*) ptr;
-  for (int i = 0; i < size / 4; i++) {
-    if(asInt[i] != 0){
-      printf("Error on %d (%p): %d\n",i,&asInt[i],asInt[i]);
-    }
-  }
-
-#if 0
-  for (int i = 0; i < size; i++) {
-    if(ptr[i] != 0){
-      printf("Error on %d (%p): %d\n",i,&ptr[i],ptr[i]);
-    }
-  }
-#endif
 
   return ptr;
 }

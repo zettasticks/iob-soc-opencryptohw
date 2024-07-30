@@ -10,7 +10,21 @@
 // McEliece
 #include "api.h"
 #include "arena.h"
+
+/**
+ * This function was obtained from the PQClean repository. It is used when running McEliece because only a small portion of McEliece is speedup by Versat.
+ * The rest of the code was taken directly from PQClean.
+ * \brief nist function that initializes random number generation
+ */
+
 void nist_kat_init(unsigned char *entropy_input, unsigned char *personalization_string, int security_strength);
+
+/**
+ * Allocates memory by pushing to the global arena.
+ * \brief Transfers file and returns content.
+ * \param filepath C-Style string that contains the filepath on the host side
+ * \return returns String with the content of the file.
+ */
 
 String PushFile(const char* filepath){
   char* start = PushArray(globalArena,0,char);
@@ -100,7 +114,6 @@ int VersatMcElieceTests(){
 
     unsigned char seed[49];
     HexStringToHex(seed,ptr);
-    printf("%.96s\n",ptr);
 
     ptr = SearchAndAdvance(ptr,STRING("PK = "));
     if(ptr == NULL){
@@ -139,9 +152,6 @@ int VersatMcElieceTests(){
     int start = GetTime();
     VersatMcEliece(public_key, secret_key);
     int end = GetTime();
-
-    // Software only implementation is slow and we are already comparing to KAT anyway and so, for McEliece, we skipping software implementation test of McEliece.
-    //PQCLEAN_MCELIECE348864_CLEAN_crypto_kem_keypair(public_key, secret_key);
 
     unsigned char* public_key_hex = PushArray(globalArena,PQCLEAN_MCELIECE348864_CLEAN_CRYPTO_PUBLICKEYBYTES * 2 + 1,unsigned char);
     unsigned char* secret_key_hex = PushArray(globalArena,PQCLEAN_MCELIECE348864_CLEAN_CRYPTO_SECRETKEYBYTES * 2 + 1,unsigned char);

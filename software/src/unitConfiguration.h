@@ -1,5 +1,4 @@
-#ifndef INCLUDED_UNIT_CONFIGURATION
-#define INCLUDED_UNIT_CONFIGURATION
+#pragma once
 
 static void IntSet(volatile void* buffer,int value,int byteSize){
    volatile int* asInt = (int*) buffer;
@@ -76,6 +75,7 @@ static void ConfigureSimpleVWrite(VWriteConfig* inst, int numberItems,int* memor
 #endif
 
 #ifdef VERSAT_DEFINED_Mem
+#if 0
 static void ConfigureMemoryOutputAndStart(MemConfig* inst, int amountOfData, int start){
    IntSet(inst,0,sizeof(MemConfig));
 
@@ -90,7 +90,9 @@ static void ConfigureMemoryOutputAndLoad(MemConfig* inst, int amountOfData, int 
    ConfigureMemoryOutputAndStart(inst,amountOfData,start);
    VersatMemoryCopy(addr.addr,data,amountOfData * sizeof(int));
 }
+#endif
 
+#if 0
 static void ConfigureMemoryOutput(MemConfig* inst, int amountOfData){
    IntSet(inst,0,sizeof(MemConfig));
 
@@ -110,5 +112,4 @@ static void ConfigureMemoryReceive(MemConfig* inst, int amountOfData){
    inst->in0_wr = 1;
 }
 #endif
-
-#endif // INCLUDED_UNIT_CONFIGURATION
+#endif

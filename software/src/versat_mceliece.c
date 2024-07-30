@@ -27,80 +27,37 @@
 // When mat is allocated in such a way that rows are guaranteed to be aligned
 #define CAST_PTR(TYPE,PTR) ((TYPE) ((void*) (PTR)))
 
-void clear_cache();
-
 static McElieceConfig* vec;
 static void* matAddr;
 
 #define SBYTE (SYS_N / 8)
 #define SINT (SBYTE / 4)
 
-void PrintRow(unsigned char* view){
-#if 0
-    for(int i = 0; i < SBYTE; i++){
-        printf("%02x",view[i]);
-        if(i % 16 == 0 && i != 0){
-            printf("\n");
-        }
-    }
-#else
-    for(int i = 0; i < 16; i++){
-        printf("%02x",view[i]);
-    }
-    printf("\n");
-    for(int i = SBYTE - 16; i < SBYTE; i++){
-        printf("%02x",view[i]);
-    }
-    printf("\n");
-#endif
-}
-
-void PrintFullRow(unsigned char* view){
-    for(int i = 0; i < SBYTE; i++){
-        printf("%02x",view[i]);
-        if(i % 16 == 0 && i != 0){
-            printf("\n");
-        }
-    }
-}
-
+/**
+ * \brief Copies row stored inside accelerator to memory
+ * \param row pointer to buffer to store row data
+ */
 void ReadRow(uint32_t* row){
     for (int i = 0; i < SINT; i++){
         row[i] = VersatUnitRead(matAddr,i);
     }
 }
 
+/**
+ * \brief Stores row inside accelerator memory
+ * \param row pointer to buffer to load row data into accelerator
+ */
 void VersatLoadRow(uint32_t* row){
     VersatMemoryCopy(matAddr,CAST_PTR(int*,row),SINT * sizeof(int));
 }
 
-void VersatPrintRow(){
-    uint32_t values[SINT];
-    ReadRow(values);
-    PrintRow(CAST_PTR(uint8_t*,values));
-}
-
-uint8_t* GetVersatRowForTests(){  
-    static uint8_t buffer[SBYTE];
-    ReadRow(CAST_PTR(uint32_t*,buffer));
-    return buffer;
-}
-
-void PrintSimpleMat(unsigned char** mat,int centerRow){
-    PrintRow(mat[0]);
-    PrintRow(mat[centerRow - 1]);
-    PrintRow(mat[centerRow]);
-    PrintRow(mat[centerRow + 1]);
-    PrintRow(mat[PK_NROWS - 1]);
-}
-
-void PrintFullMat(unsigned char** mat){
-    printf("Printing full mat:\n");
-    for(int i = 0; i < PK_NROWS; i++){
-        PrintFullRow(mat[i]);
-    }
-}
-
+/**
+ * This function applies XOR operation from the row receive as input to the row stored inside the accelerator
+ * \brief Performs first loop of guassian matrix processing with one row
+ * \param row of the matrix to process
+ * \param mask to apply during the operation
+ * \param first true if first loop
+ */
 void VersatMcElieceLoop1(uint8_t *row, uint8_t mask,bool first){
     static uint8_t savedMask = 0;
     uint32_t *row_int = CAST_PTR(uint32_t*,row);
@@ -120,7 +77,15 @@ void VersatMcElieceLoop1(uint8_t *row, uint8_t mask,bool first){
     savedMask = mask;
 }
 
-// Can only be called if k != row. Care
+/**
+ * This function applies XOR operation from the row stored inside the accelerator to the row received as input. Can only be called if k != row
+ * \brief Performs second loop of guassian matrix processing with one row
+ * \param mat the entire matrix as an array of arrays
+ * \param timesCalled how many times the function was called. Used to simplify the manner in which the accelerator is configured
+ * \param k index of the row going to be processed next
+ * \param row index of the row being processed
+ * \param mask to apply during the operation
+ */
 void VersatMcElieceLoop2(unsigned char** mat,int timesCalled,int k,int row,uint8_t mask){
     static uint8_t savedMask = 0;
 
@@ -176,62 +141,10 @@ static crypto_uint64 uint64_is_zero_declassify(uint64_t t) {
 }
 
 
-#if 0
-module McEliece(){
-   ReadWriteMem mat;
-   VRead row;
-   VWrite writer;
-   Const mask;
-#
-   a = row & mask;
-   b = mat ^ a;
-
-   c = mat & mask;
-   d = row ^ c;
-
-   b -> mat;
-   d -> writer;
-}
-#endif
-
-void TestMcEliece(){
-    // Init needed values for versat later on.  
-    CryptoAlgosConfig* topConfig = (CryptoAlgosConfig*) accelConfig;
-    vec = (McElieceConfig*) &topConfig->eliece;
-    matAddr = (void*) TOP_eliece_mat_addr;
-
-    vec->mask.constant = 0xff;
-
-    int matValues[] = {0,1,2,3,4,5,6,7};
-    int rowValues[] = {8,9,10,11,12,13,14,15};
-    int result[8] = {};
-
-    vec->mat.iterA = 1;
-    vec->mat.incrA = 1;
-    vec->mat.iterB = 1;
-    vec->mat.incrB = 1;
-    vec->mat.perA = 8;
-    vec->mat.dutyA = 8;
-    vec->mat.perB = 8;
-    vec->mat.dutyB = 8;
-
-    VersatMemoryCopy(matAddr,matValues,8 * sizeof(int));
-    ConfigureSimpleVRead(&vec->row,8,rowValues);
-
-    RunAccelerator(1);
-    vec->mat.in0_wr = 1;
-    RunAccelerator(1);
-
-    for(int i = 0; i < 8; i++){
-        printf("%x ",VersatUnitRead(matAddr,i));
-    }
-    printf("\n");
-
-    //ConfigureSimpleVReadBare(&vec->row);
-}
-
-/* input: secret key sk */
-/* output: public key pk */
+/**
+ * This function was taken from PQClean. Only a small portion of this function was altered to implement acceleration and to make it work in an embedded system. 
+ * \brief Versat implementation of the pk_gen function.
+ */
 int Versat_pk_gen(unsigned char *pk, unsigned char *sk, const uint32_t *perm, int16_t *pi) {
     int i, j, k;
     int row, c;
@@ -346,8 +259,6 @@ int Versat_pk_gen(unsigned char *pk, unsigned char *sk, const uint32_t *perm, in
         for (j = 0; j < 8; j++) {
             row = i * 8 + j;
 
-            printf("%d\n",i);
-
             if (row >= PK_NROWS) {
                 break;
             }
@@ -398,8 +309,6 @@ int Versat_pk_gen(unsigned char *pk, unsigned char *sk, const uint32_t *perm, in
             VersatMcElieceLoop2(mat,index++,PK_NROWS,row,0);
             VersatMcElieceLoop2(mat,index++,PK_NROWS + 1,row,0);
             vec->writer.enableWrite = 0;
-
-            clear_cache();
         }
     }
 
@@ -411,7 +320,7 @@ int Versat_pk_gen(unsigned char *pk, unsigned char *sk, const uint32_t *perm, in
     return 0;
 }
 
-int VersatMcEliece
+void VersatMcEliece
 (
     unsigned char *pk,
     unsigned char *sk
@@ -487,5 +396,4 @@ int VersatMcEliece
     }
 
     PopArena(globalArena,mark);
-    return 0;
 }

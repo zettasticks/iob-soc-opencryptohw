@@ -16,8 +16,7 @@
 
 static CryptoAlgosAddr aesAddr;
 
-// Sbox and Reverse SBox are lookup tables defined by AES.
-
+//! SBox lookup table. Values are defined by the AES algorithm
 const uint8_t sbox[256] = {
    0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,
    0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0, 0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0,
@@ -36,6 +35,7 @@ const uint8_t sbox[256] = {
    0xe1, 0xf8, 0x98, 0x11, 0x69, 0xd9, 0x8e, 0x94, 0x9b, 0x1e, 0x87, 0xe9, 0xce, 0x55, 0x28, 0xdf,
    0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16 };
 
+//! Reverse SBox lookup table. Values are directly by the AES algorithm
 static const uint8_t rsbox[256] = {
   0x52, 0x09, 0x6a, 0xd5, 0x30, 0x36, 0xa5, 0x38, 0xbf, 0x40, 0xa3, 0x9e, 0x81, 0xf3, 0xd7, 0xfb,
   0x7c, 0xe3, 0x39, 0x82, 0x9b, 0x2f, 0xff, 0x87, 0x34, 0x8e, 0x43, 0x44, 0xc4, 0xde, 0xe9, 0xcb,
@@ -58,6 +58,7 @@ static const uint8_t rsbox[256] = {
 // While possible to do in hardware, it is easier to instantiate lookup tables since the 
 // multiplication is only done with constants. 
 
+//! Lookup table for a polynomial multiplication by a constant 2 in a galois field
 const uint8_t mul2[] = {
    0x00,0x02,0x04,0x06,0x08,0x0a,0x0c,0x0e,0x10,0x12,0x14,0x16,0x18,0x1a,0x1c,0x1e,
    0x20,0x22,0x24,0x26,0x28,0x2a,0x2c,0x2e,0x30,0x32,0x34,0x36,0x38,0x3a,0x3c,0x3e,
@@ -77,6 +78,7 @@ const uint8_t mul2[] = {
    0xfb,0xf9,0xff,0xfd,0xf3,0xf1,0xf7,0xf5,0xeb,0xe9,0xef,0xed,0xe3,0xe1,0xe7,0xe5
 };
 
+//! Lookup table for a polynomial multiplication by a constant 3 in a galois field
 const uint8_t mul3[] = {
    0x00,0x03,0x06,0x05,0x0c,0x0f,0x0a,0x09,0x18,0x1b,0x1e,0x1d,0x14,0x17,0x12,0x11,
    0x30,0x33,0x36,0x35,0x3c,0x3f,0x3a,0x39,0x28,0x2b,0x2e,0x2d,0x24,0x27,0x22,0x21,
@@ -96,6 +98,7 @@ const uint8_t mul3[] = {
    0x0b,0x08,0x0d,0x0e,0x07,0x04,0x01,0x02,0x13,0x10,0x15,0x16,0x1f,0x1c,0x19,0x1a
 };
 
+//! Lookup table for a polynomial multiplication by a constant 9 in a galois field
 const uint8_t mul9[] = {
    0x00,0x09,0x12,0x1b,0x24,0x2d,0x36,0x3f,0x48,0x41,0x5a,0x53,0x6c,0x65,0x7e,0x77,
    0x90,0x99,0x82,0x8b,0xb4,0xbd,0xa6,0xaf,0xd8,0xd1,0xca,0xc3,0xfc,0xf5,0xee,0xe7,
@@ -115,6 +118,7 @@ const uint8_t mul9[] = {
    0x31,0x38,0x23,0x2a,0x15,0x1c,0x07,0x0e,0x79,0x70,0x6b,0x62,0x5d,0x54,0x4f,0x46
 };
 
+//! Lookup table for a polynomial multiplication by a constant 11 in a galois field
 const uint8_t mul11[] = {
    0x00,0x0b,0x16,0x1d,0x2c,0x27,0x3a,0x31,0x58,0x53,0x4e,0x45,0x74,0x7f,0x62,0x69,
    0xb0,0xbb,0xa6,0xad,0x9c,0x97,0x8a,0x81,0xe8,0xe3,0xfe,0xf5,0xc4,0xcf,0xd2,0xd9,
@@ -134,6 +138,7 @@ const uint8_t mul11[] = {
    0xca,0xc1,0xdc,0xd7,0xe6,0xed,0xf0,0xfb,0x92,0x99,0x84,0x8f,0xbe,0xb5,0xa8,0xa3
 };
 
+//! Lookup table for a polynomial multiplication by a constant 13 in a galois field
 const uint8_t mul13[] = {
    0x00,0x0d,0x1a,0x17,0x34,0x39,0x2e,0x23,0x68,0x65,0x72,0x7f,0x5c,0x51,0x46,0x4b,
    0xd0,0xdd,0xca,0xc7,0xe4,0xe9,0xfe,0xf3,0xb8,0xb5,0xa2,0xaf,0x8c,0x81,0x96,0x9b,
@@ -153,6 +158,7 @@ const uint8_t mul13[] = {
    0xdc,0xd1,0xc6,0xcb,0xe8,0xe5,0xf2,0xff,0xb4,0xb9,0xae,0xa3,0x80,0x8d,0x9a,0x97
 };
 
+//! Lookup table for a polynomial multiplication by a constant 14 in a galois field
 const uint8_t mul14[] = {
    0x00,0x0e,0x1c,0x12,0x38,0x36,0x24,0x2a,0x70,0x7e,0x6c,0x62,0x48,0x46,0x54,0x5a,
    0xe0,0xee,0xfc,0xf2,0xd8,0xd6,0xc4,0xca,0x90,0x9e,0x8c,0x82,0xa8,0xa6,0xb4,0xba,
@@ -172,17 +178,29 @@ const uint8_t mul14[] = {
    0xd7,0xd9,0xcb,0xc5,0xef,0xe1,0xf3,0xfd,0xa7,0xa9,0xbb,0xb5,0x9f,0x91,0x83,0x8d
 };
 
-// Bunch of functions to fill lookup tables with their values.
-
+/**
+ * \brief Fills a lookup table unit contents from memory
+ * \param addr of lookup table unit to fill
+ * \param mem pointer to memory
+ * \param size in bytes to memory
+ */
 void FillLookupTable(LookupTableAddr addr,const uint8_t* mem,int size){
    VersatMemoryCopy(addr.addr,mem,size * sizeof(uint8_t));
 }
 
+/**
+ * \brief Fills GenericKeySchedule unit with lookup table values
+ * \param addr of GenericKeySchedule unit
+ */
 void FillKeySchedule(GenericKeySchedule256Addr addr){
    FillLookupTable(addr.s.b_0,sbox,ARRAY_SIZE(sbox));
    FillLookupTable(addr.s.b_1,sbox,ARRAY_SIZE(sbox));
 }
 
+/**
+ * \brief Fills DoRow unit with lookup table values
+ * \param addr of DoRow unit
+ */
 void FillRow(DoRowAddr addr){
    FillLookupTable(addr.mul2_0,mul2,ARRAY_SIZE(mul2));
    FillLookupTable(addr.mul2_1,mul2,ARRAY_SIZE(mul2));
@@ -190,6 +208,10 @@ void FillRow(DoRowAddr addr){
    FillLookupTable(addr.mul3_1,mul3,ARRAY_SIZE(mul3));
 }
 
+/**
+ * \brief Fills MixColumns unit with lookup table values
+ * \param addr of MixColumns unit
+ */
 void FillMixColumns(MixColumnsAddr addr){
    FillRow(addr.d_0);
    FillRow(addr.d_1);
@@ -197,10 +219,18 @@ void FillMixColumns(MixColumnsAddr addr){
    FillRow(addr.d_3);
 }
 
+/**
+ * \brief Fills MainRound unit with lookup table values
+ * \param addr of MainRound unit
+ */
 void FillMainRound(FullAESRoundsAddr addr){
    FillMixColumns(addr.mixColumns);
 }
 
+/**
+ * \brief Fills InvDoRow unit with lookup table values
+ * \param addr of InvDoRow unit
+ */
 void FillInvDoRowAddr(InvDoRowAddr addr){
   FillLookupTable(addr.mul9_0,mul9,ARRAY_SIZE(mul9));
   FillLookupTable(addr.mul9_1,mul9,ARRAY_SIZE(mul9));
@@ -212,6 +242,10 @@ void FillInvDoRowAddr(InvDoRowAddr addr){
   FillLookupTable(addr.mul14_1,mul14,ARRAY_SIZE(mul14));
 }
 
+/**
+ * \brief Fills InvMixColumns unit with lookup table values
+ * \param addr of InvMixColumns unit
+ */
 void FillInvMixColumns(InvMixColumnsAddr addr){
    FillInvDoRowAddr(addr.d_0);
    FillInvDoRowAddr(addr.d_1);
@@ -219,12 +253,19 @@ void FillInvMixColumns(InvMixColumnsAddr addr){
    FillInvDoRowAddr(addr.d_3);
 }
 
-inline void FillInvMainRound(FullAESRoundsAddr addr){
+/**
+ * \brief Fills InvMainRounds unit with lookup table values
+ * \param addr of InvMainRounds unit
+ */
+void FillInvMainRound(FullAESRoundsAddr addr){
    FillInvMixColumns(addr.invMixColumns);
 }
 
-// Performs key expansion and stores the expanded key directly inside the accelerator.
-
+/**
+ * \brief Expands a key to 
+ * \param key buffer with the key. Must contain 16 bytes for 128 bit AES or 32 bytes for 256 bit AES
+ * \param is256 wether we want AES-128 or AES-256
+ */
 void ExpandKey(uint8_t* key,bool is256){
   static  const int rcon[] = {0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80,0x1b,0x36};
 
@@ -281,8 +322,14 @@ void ExpandKey(uint8_t* key,bool is256){
   config->aes.key_0.disabled = 1;
 }
 
-// Generic encrypt function. LastAddition is needed to implement CTR. Every other mode passes null.
-
+/**
+ * \brief Generic AES encrypt function
+ * \param data buffer to encrypt
+ * \param result buffer to store result of encryption
+ * \param lastAddition buffer that a block that is added last. Needed to implement CTR
+ * \param is256 wether we want AES-128 or AES-256
+ * \param isCBC true if doing CBC mode
+ */
 void Encrypt(uint8_t* data,uint8_t* result,uint8_t* lastAddition,bool is256,bool isCBC){
   int numberRounds = 10;
   if(is256){
@@ -336,9 +383,13 @@ void Encrypt(uint8_t* data,uint8_t* result,uint8_t* lastAddition,bool is256,bool
   }
 }
 
-// Generic decrypt function. 
-
-void Decrypt(uint8_t* data,uint8_t* result,uint8_t* lastAddition,bool is256){
+/**
+ * \brief Generic AES decrypt function
+ * \param data buffer to encrypt
+ * \param result buffer to store result of encryption
+ * \param is256 wether we want AES-128 or AES-256
+ */
+void Decrypt(uint8_t* data,uint8_t* result,bool is256){
   int numberRounds = 10;
   if(is256){
     numberRounds = 14;
@@ -369,13 +420,6 @@ void Decrypt(uint8_t* data,uint8_t* result,uint8_t* lastAddition,bool is256){
 
   EndAccelerator();
 
-  if(lastAddition){
-    RegAddr* view = &aesAddr.aes.lastValToAdd_0;
-    for(int i = 0; i < 16; i++){
-      VersatUnitWrite(view[i].addr,0,lastAddition[i]);
-    }
-  }
-
   StartAccelerator();
 
   EndAccelerator();
@@ -385,16 +429,20 @@ void Decrypt(uint8_t* data,uint8_t* result,uint8_t* lastAddition,bool is256){
   }
 }
 
-// This is the common part of VersatAES.
-// Need to call InitAES after if going to encrypt.
-// Need to call InitInvAES after if going to decrypt.
-
+/**
+ * This function must be called before any AES operation.
+ * \brief Initializes Versat AES.
+ */
 void InitVersatAES(){
    aesAddr = (CryptoAlgosAddr) ACCELERATOR_TOP_ADDR_INIT;
    FillKeySchedule(aesAddr.aes.schedule);
 }
 
-void InitAES(){
+/**
+ * This function must be called before any encryption operation.
+ * \brief Initializes Versat AES for encryption operations
+ */
+void InitAESEncryption(){
    FillMainRound(aesAddr.aes.round);
    CryptoAlgosConfig* config = (CryptoAlgosConfig*) accelConfig;
 
@@ -414,7 +462,11 @@ void InitAES(){
    config->aes.lastResult_0.disabled = 1;
 }
 
-void InitInvAES(){
+/**
+ * This function must be called before any decryption operation.
+ * \brief Initializes Versat AES for decryption operations
+ */
+void InitAESDecryption(){
    CryptoAlgosConfig* config = (CryptoAlgosConfig*) accelConfig;
    FillInvMainRound(aesAddr.aes.round);
    {
@@ -433,16 +485,14 @@ void InitInvAES(){
    config->aes.lastResult_0.disabled = 1;
 }
 
-void PrintResult(uint8_t* buffer){
-   for(int i = 0; i < 16; i++){
-      printf("%02x",buffer[i]);
-   }   
-}
-
+/**
+ * \brief Loads initialization vector to inside the accelerator
+ * \param iv buffer with the initialization vector. Must contain 16 bytes
+ */
 void LoadIV(uint8_t* iv){
    CryptoAlgosConfig* config = (CryptoAlgosConfig*) accelConfig;
 
-   RegAddr* view = &addr.aes.lastResult_0;
+   RegAddr* view = &aesAddr.aes.lastResult_0;
    for(int i = 0; i < 16; i++){
       VersatUnitWrite(view[i].addr,0,iv[i]);
    }
@@ -459,27 +509,44 @@ typedef enum{
    CryptoType_CTR256
 } CryptoType;
 
-void AES_ECB256(uint8_t* key,uint8_t* data,uint8_t* encrypted){
+void AES_ECB256(uint8_t* key,uint8_t* plaintext,uint8_t* result){
    ExpandKey(key,true);
 
-   Encrypt(data,encrypted,NULL,true,false);
+   Encrypt(plaintext,result,NULL,true,false);
 }
 
+/**
+ * \brief AES encrypting using ECB mode
+ * \param key buffer with the key. Must contain 16 bytes for 128 bit AES and 32 bytes for 256 bit AES.
+ * \param data buffer to encrypt
+ * \param encrypted buffer to store result of encryption
+ * \param decrypted buffer to store result of decryption
+ * \param is256 wether we want AES-128 or AES-256
+ */
 void ECB(uint8_t* key,uint8_t* data,uint8_t* encrypted,uint8_t* decrypted,bool is256){
-   InitAES();
+   InitAESEncryption();
 
    ExpandKey(key,is256);
 
    Encrypt(data,encrypted,NULL,is256,false);
    Encrypt(data + 16,encrypted + 16,NULL,is256,false);
 
-   InitInvAES();
-   Decrypt(encrypted,decrypted,NULL,is256);
-   Decrypt(encrypted + 16,decrypted + 16,NULL,is256);
+   InitAESDecryption();
+   Decrypt(encrypted,decrypted,is256);
+   Decrypt(encrypted + 16,decrypted + 16,is256);
 }
 
+/**
+ * \brief AES encrypting using CBC mode
+ * \param key buffer with the key. Must contain 16 bytes for 128 bit AES and 32 bytes for 256 bit AES.
+ * \param iv initialization vector. Must contain 16 bytes
+ * \param data buffer to encrypt
+ * \param encrypted buffer to store result of encryption
+ * \param decrypted buffer to store result of decryption
+ * \param is256 wether we want AES-128 or AES-256
+ */
 void CBC(uint8_t* key,uint8_t* iv,uint8_t* data,uint8_t* encrypted,uint8_t* decrypted,bool is256){
-   InitAES();
+   InitAESEncryption();
 
    ExpandKey(key,is256);
    LoadIV(iv);
@@ -487,14 +554,19 @@ void CBC(uint8_t* key,uint8_t* iv,uint8_t* data,uint8_t* encrypted,uint8_t* decr
    Encrypt(data,encrypted,NULL,is256,true);
    Encrypt(data + 16,encrypted + 16,NULL,is256,true);
 
-   InitInvAES();
+   InitAESDecryption();
 
    LoadIV(iv);
-   Decrypt(encrypted,decrypted,NULL,is256);
+   Decrypt(encrypted,decrypted,is256);
    LoadIV(encrypted);
-   Decrypt(encrypted + 16,decrypted + 16,NULL,is256);
+   Decrypt(encrypted + 16,decrypted + 16,is256);
 }
 
+/**
+ * \brief Swaps endianess
+ * \param val to swap
+ * \return value of 32 bits with endianess swapped
+ */
 uint32_t Swap(uint32_t val){
    uint32_t res = ((val & 0x000000FF) << 24) |
                   ((val & 0x0000FF00) << 8)  |
@@ -504,10 +576,19 @@ uint32_t Swap(uint32_t val){
    return res;
 }
 
+/**
+ * \brief AES encrypting using CTR mode
+ * \param key buffer with the key. Must contain 16 bytes for 128 bit AES and 32 bytes for 256 bit AES.
+ * \param counter buffer with the initial counter. Must contain 16 bytes
+ * \param data buffer to encrypt
+ * \param encrypted buffer to store encrypted result
+ * \param decrypted buffer to store decrypted result
+ * \param is256 wether we want AES-128 or AES-256
+ */
 void CTR(uint8_t* key,uint8_t* counter,uint8_t* data,uint8_t* encrypted,uint8_t* decrypted,bool is256){
    uint8_t counterBuffer[16];
 
-   InitAES();
+   InitAESEncryption();
    memcpy(counterBuffer,counter,16 * sizeof(uint8_t));
 
    ExpandKey(key,is256);
@@ -530,6 +611,20 @@ void CTR(uint8_t* key,uint8_t* counter,uint8_t* data,uint8_t* encrypted,uint8_t*
    Encrypt(counterBuffer,decrypted + 16,encrypted + 16,is256,false);
 }
 
+static void PrintResult(uint8_t* buffer){
+   for(int i = 0; i < 16; i++){
+      printf("%02x",buffer[i]);
+   }   
+}
+
+/**
+ * \brief Tests AES using one mode selected by type
+ * \param type The mode and key size to use
+ * \param key buffer with the key. Must contain 16 bytes for 128 bit AES and 32 bytes for 256 bit AES.
+ * \param iv initialization vector. Needed for CBC and CTR mode. NULL otherwise
+ * \param plaintext buffer to encrypt.
+ * \param expected buffer with content that we expect to see. Otherwise something went wrong
+ */
 void TestOneMode(CryptoType type,const char* key,const char* iv,const char* plaintext,const char* expected){
    uint8_t keyBuffer[32];
    uint8_t dataBuffer[32];
@@ -586,9 +681,11 @@ void TestOneMode(CryptoType type,const char* key,const char* iv,const char* plai
    printf("\n");
 }
 
-// Simple function that tests all the modes for simple examples
-
-void VersatAES(){
+/** 
+ * Uses tests embedded in source code as constants.
+ * \brief Tests AES for different modes and key sizes
+ */
+void VersatAESModeTests(){
    const char* key128 = "2b7e151628aed2a6abf7158809cf4f3c";
    const char* key256 = "603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4";
    const char* plaintext = "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e51";

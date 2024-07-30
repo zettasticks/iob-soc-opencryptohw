@@ -12,15 +12,12 @@
 #include "arena.h"
 #include "string.h"
 
-void versat_init(int);
-void AES_ECB256(uint8_t* key,uint8_t* data,uint8_t* encrypted);
-
 void InitializeCryptoSide(int versatAddress){
   versat_init(versatAddress);
   ConfigEnableDMA(true); // No problem using DMA in embedded.
 }
 
-static char* SearchAndAdvance(char* ptr,String str){
+char* SearchAndAdvance(char* ptr,String str){
   char* firstChar = strstr(ptr,str.str);
   if(firstChar == NULL){
     return NULL;
@@ -30,7 +27,7 @@ static char* SearchAndAdvance(char* ptr,String str){
   return advance;
 }
 
-static int ParseNumber(char* ptr){
+int ParseNumber(char* ptr){
   int count = 0;
 
   while(ptr != NULL){
@@ -49,7 +46,6 @@ static int ParseNumber(char* ptr){
   return count;
 }
 
-// Parses content and performs each test found
 TestState VersatCommonSHATests(String content){
   TestState result = {};
 
@@ -137,7 +133,6 @@ TestState VersatCommonSHATests(String content){
   return result;
 }
 
-// Parses content and performs each test found
 TestState VersatCommonAESTests(String content){
   TestState result = {};
 
@@ -145,7 +140,7 @@ TestState VersatCommonAESTests(String content){
 
   int start = GetTime();
   InitVersatAES();
-  InitAES();
+  InitAESEncryption();
   int end = GetTime();
 
   result.initTime = end - start;
@@ -241,6 +236,9 @@ static char GetHexadecimalChar(unsigned char value){
   }
 }
 
+/**
+ *  Given a bunch of bytes, computes the hexadecimal representation and stores it in buffer.
+ */
 char* GetHexadecimal(const char* text,char* buffer,int str_size){
   int i = 0;
   unsigned char* view = (unsigned char*) text;
@@ -266,7 +264,9 @@ static char HexToInt(char ch){
    }
 }
 
-// Make sure that buffer is capable of storing the whole thing. Returns number of bytes inserted
+/**
+ *  Given a string of hexadecimal characters, converts them into bytes
+ */
 int HexStringToHex(char* buffer,const char* str){
    int inserted = 0;
    for(int i = 0; ; i += 2){
