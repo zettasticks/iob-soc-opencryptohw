@@ -42,7 +42,7 @@ dependencies.
 To run PC emulation, type:
 
 ```bash
-make pc-run
+make pc-emul
 ```
 
 To run simulation, type:
