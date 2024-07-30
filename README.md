@@ -80,3 +80,9 @@ A unit called CryptoAlgos, which instantiates the SHA, AES, and McEliece units, 
 ## Tests
 
 Each cryptographic algorithm is tested by comparing it to a KAT. AES was tested for the 256-bit variant in ECB mode.
+
+# Acknowledgement
+This project is funded through the NGI Assure Fund, a fund established by NLnet
+with financial support from the European Commission's Next Generation Internet
+programme, under the aegis of DG Communications Networks, Content and Technology
+under grant agreement No 957073.
