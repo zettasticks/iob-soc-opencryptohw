@@ -1,6 +1,8 @@
 /*
    SHA units 
 */
+
+// Unit that saves one byte of state and is programmed to accumulate the state with the input
 module ShaSingleState(in){
    Reg reg;
 #
@@ -9,7 +11,7 @@ module ShaSingleState(in){
    reg -> out;
 }
 
-// Unit that saves SHA state
+// Unit that saves SHA state (8 bytes of ShaSingleState)
 module ShaState(x[8]){
    ShaSingleState s[8];
 #
@@ -17,17 +19,19 @@ module ShaState(x[8]){
    s[0..7] -> out:0..7;
 }
 
-// All the memories can share configuration since they all output the same amount of data
+// Module that stores constants for Sha
 module Constants(){
-   static OnlyOutputMem mem;
+   static OnlyOutputMem mem; // All the memories can share configuration since they all output the same amount of data
 #
    mem -> out:0;
 }
 
 // SHA is basically a loop that changes state per run based on data read from memory.
 module SHA(){
-   VRead MemRead;
+   VRead MemRead; // Reads input
    SwapEndian Swap; // Need to swap endianess to work properly. 
+
+   // These units implement the rounds as defined by the SHA algorithm
    xunitF F0;
    xunitF F1;
    xunitF F2;
@@ -35,6 +39,7 @@ module SHA(){
    xunitM M0;
    xunitM M1;
    xunitM M2;
+
    Constants cMem0; // Constants required by the algorithm
    Constants cMem1;
    Constants cMem2;
@@ -76,7 +81,6 @@ module RSBoxGroup(x[16]){
    box[0..15] -> out:0..15;
 }
 
-
 module ShiftRows(x[16]){
 #
    // First row
@@ -107,8 +111,27 @@ module InvShiftRows(x[16]){
    {x[3],x[7],x[11],x[15]} -> {out:15,out:3,out:7,out:11};
 }
 
+// Groups all the lookup tables into a unit that processes a row
+module DoRow(x[4]){
+   LookupTable #(.ADDR_W(8),.SIZE_W(8)) mul2[2];
+   LookupTable #(.ADDR_W(8),.SIZE_W(8)) mul3[2];
+#
+   // "Multiple" (lookup) each by 2 and by 3
+   x[0..3] -> {mul2[0]:0..1,mul2[1]:0..1};
+   x[0..3] -> {mul3[0]:0..1,mul3[1]:0..1};
+
+   r0 = x[2] ^ x[3] ^ mul2[0]   ^ mul3[0]:1;
+   r1 = x[0] ^ x[3] ^ mul2[0]:1 ^ mul3[1] ;
+   r2 = x[0] ^ x[1] ^ mul2[1]   ^ mul3[1]:1;
+   r3 = x[1] ^ x[2] ^ mul2[1]:1 ^ mul3[0];
+
+   {r0,r1,r2,r3} -> out:0..3;
+}
+
+// Groups all the lookup tables into a unit that processes a row
 module InvDoRow(x[4]){
-   LookupTable #(.ADDR_W(8),.SIZE_W(8)) mul9[2]; // We do need to change address sizes otherwise the default value from Versat would exhaust all the memory available.
+   // We do need to change address sizes otherwise the default value from Versat would exhaust all the memory available.
+   LookupTable #(.ADDR_W(8),.SIZE_W(8)) mul9[2];
    LookupTable #(.ADDR_W(8),.SIZE_W(8)) mul11[2];
    LookupTable #(.ADDR_W(8),.SIZE_W(8)) mul13[2];
    LookupTable #(.ADDR_W(8),.SIZE_W(8)) mul14[2];
@@ -127,22 +150,7 @@ module InvDoRow(x[4]){
    {r0,r1,r2,r3} -> out:0..3;
 }
 
-module DoRow(x[4]){
-   LookupTable #(.ADDR_W(8),.SIZE_W(8)) mul2[2];
-   LookupTable #(.ADDR_W(8),.SIZE_W(8)) mul3[2];
-#
-   // "Multiple" (lookup) each by 2 and by 3
-   x[0..3] -> {mul2[0]:0..1,mul2[1]:0..1};
-   x[0..3] -> {mul3[0]:0..1,mul3[1]:0..1};
-
-   r0 = x[2] ^ x[3] ^ mul2[0]   ^ mul3[0]:1;
-   r1 = x[0] ^ x[3] ^ mul2[0]:1 ^ mul3[1] ;
-   r2 = x[0] ^ x[1] ^ mul2[1]   ^ mul3[1]:1;
-   r3 = x[1] ^ x[2] ^ mul2[1]:1 ^ mul3[0];
-
-   {r0,r1,r2,r3} -> out:0..3;
-}
-
+// Implements MixColumn by implementing one DoRow for each row
 module MixColumns(x[16]){
    DoRow d[4];
 #
@@ -157,6 +165,7 @@ module MixColumns(x[16]){
    d[3]:0..3 -> {out:12,out:13,out:14,out:15};
 }
 
+// Implements InvMixColumn by implementing one InvDoRow for each row
 module InvMixColumns(x[16]){
    InvDoRow d[4];
 #
@@ -171,6 +180,7 @@ module InvMixColumns(x[16]){
    d[3]:0..3 -> {out:12,out:13,out:14,out:15};
 }
 
+// Since doing xor with 16 values is common in AES, this unit simplifies the process
 module XorAdd(x[16],y[16]){
 #
    a[0] = x[0] ^ y[0];
@@ -193,7 +203,7 @@ module XorAdd(x[16],y[16]){
    a[0..15] -> out:0..15;
 }
 
-// Next key generation logic that supports 128 bit and 256 bit AES
+// Next key generation logic that supports 128 bit and 256 bit AES for a row
 module GenericLineKey(x[4],w[4],rcon){
    LookupTable #(.ADDR_W(8),.SIZE_W(8)) b[2];
    Mux2 mux[4];
@@ -211,6 +221,7 @@ module GenericLineKey(x[4],w[4],rcon){
    d[0..3] -> out:0..3;
 }
 
+// Uses GenericLineKey to create a next key generation unit that takes a full matrix
 module GenericKeySchedule256(x[16],w[16],rcon){
    GenericLineKey s;
 #
@@ -239,7 +250,9 @@ module GenericKeySchedule256(x[16],w[16],rcon){
    c[0..3] -> out:12..15;
 }
 
-// All the AES dapath described using the same format.
+// All the AES dapath described use the same input and outputs so they can merge nicely.
+// These implementations are just simple instantiation and connection, since
+// all the AES steps are already implemented in units such as MixColumn, ShiftRows and so on.
 module AESFirstAdd(x[16],k[16],iv[16]){
    XorAdd addKey;
    XorAdd addKey2;
@@ -325,11 +338,11 @@ module AESInvLastRound(x[16],key[16],iv[16]){
    removeIv:0..15 -> out:0..15;
 }
 
-// We describe all the AES datapath that can change by this module 
+// Merge all the different possible steps into a single unit
 merge FullAESRounds = AESFirstAdd | AESRound | AESLastRound | AESInvFirstAdd | AESInvRound | AESInvLastRound;
 
 // This module only cares about describing the state and units that guard state and memories.
-// The entire "datapath" is basically the FullAESRounds units.
+// The entire "AES datapath" is implemented by the FullAESRounds units.
 module FullAES(){
    share config RegFile{
       key[16];
@@ -368,8 +381,9 @@ module FullAES(){
 
 // The entire McEliece unit is basically just a glorified SIMD processor.
 // Store current row in mat, use VRead to read the rows needed to process and 
-// either we use row to change mat or we use mat to change row and write back to mem.
-// It is currently only used to speed up Gaussian elimination
+// either we use row to change mat or we use mat to change row and write back to memory.
+// It is currently only used to speed up Gaussian elimination, which is the part where
+// McEliece was speeding the most time when profiling
 module McEliece(){
    ReadWriteMem mat;
    VRead row;
