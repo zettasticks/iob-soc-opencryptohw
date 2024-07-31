@@ -62,7 +62,7 @@ test-all:
 	make clean && make setup && make -C ../iob_soc_opencryptohw_V*/ doc-test
 
 doc:
-	mkdir ../iob_soc_opencryptohw_V0.70
+	mkdir -p ../iob_soc_opencryptohw_V0.70
 	nix-shell --run "doxygen"
 
 .PHONY: sim-test fpga-test test-all doc
