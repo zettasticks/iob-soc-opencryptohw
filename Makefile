@@ -62,7 +62,7 @@ test-all:
 	make clean && make setup && make -C ../iob_soc_opencryptohw_V*/ doc-test
 
 doc-build:
-	mkdir ../iob_soc_opencryptohw_V0.70
+	mkdir -p ../iob_soc_opencryptohw_V0.70
 	nix-shell --run "doxygen"
 	firefox ../iob_soc_opencryptohw_V0.70/doc/html/index.html &
 
