@@ -8,7 +8,7 @@ IOb-SoC-OpenCryptoHW is a system on a chip that runs the SHA, AES, and McEliece 
 - [Cloning the Repository](#cloning-the-repository)
 - [Requirements](#requirements)
 - [Running the Project](#running-the-project)
-- [IOb-SoC/Versat Tutorial](#iob-soc-versat-tutorial)
+- [IOb-SoC with Versat Tutorial](#iob-soc-with-versat-tutorial)
     * [SHA-256](#sha-256)
     * [AES](#aes)
     * [McEliece](#mceliece)
@@ -45,13 +45,13 @@ To run PC emulation, type:
 make pc-emul
 ```
 
-To run simulation, type:
+To run the simulation, type:
 
 ```bash
 make sim-run
 ```
 
-To run FPGA emulation, type:
+To run the FPGA emulation, type:
 
 ```bash
 make fpga-run
@@ -66,11 +66,15 @@ make doc-build
 More targets can be found in the Makefile.
 
 
-# IOb-SoC/Versat Tutorial
+# IOb-SoC with Versat Tutorial
 
-Versat is a tool that generates custom-made accelerators following the dataflow paradigm. The accelerator used in IOb-SoC-OpenCryptoHW is specified in the Versat native specification language and can be found in the file ./versatSpec.txt. The majority of units used are either primary or complex default Versat units. Other units have been customized for this project and can be found in hardware\src\units.
+IOb-SoC is a system on a chip template, written in Verilog, that enables the integration of a RISC-V processor with peripherals. Versat is a tool that generates custom-made accelerators following the dataflow paradigm. This tutorial will guide you through integrating a Versat accelerator in an IOb-SoC system.
 
-Given that the IOb-Versat already explains how Versat works and there are illustrative examples in the IOb-SoC-Versat repository, this tutorial will only explain how the three crypto algorithms are implemented. All accelerators are described in the file ./versatSpec.txt, and the firmware is in the directory software/src. A software manual is delivered in the document/html build directory.
+The reader is encouraged to read the [Versat Tutorial](https://github.com/IObundle/iob-versat/blob/master/README.md) to understand how to create a custom accelerator using Versat and integrate it into IOb-SoC.
+
+The accelerator used in IOb-SoC-OpenCryptoHW is specified in the Versat native specification language and can be found in the file ./versatSpec.txt. The majority of units used are either primary or complex default Versat units. Other units have been customized for this project and can be found in hardware/src/units. The firmware can be found in the directory software/src, and the software manual is delivered in the document/html build directory that explains its usage.
+
+Given the above background, this tutorial will explain how the three cryptographic algorithms are implemented. All accelerators are described in the file ./versatSpec.txt.
 
 ## SHA-256
 
@@ -80,19 +84,19 @@ To speed up SHA-256, we designed an accelerator to process one block per run. In
 
 The accelerator stores the state inside it and contains some memories to store all the constants required by the SHA algorithm. The logic is implemented by instantiating the xunitF and xunitM custom units, written in Verilog and found in ./hardware/src/units.
 
-We use a VRead unit to load the input. This unit allows us to process data while reading the next block, effectively hiding the read latency. Since we only need to read a block (64 bytes = 16 reads of 4 bytes at a time) and it takes around 67 cycles to process a block, the accelerator is practically never waiting for memory and is always doing useful work.
+We use a VRead unit to load the input. This unit allows us to process data while reading the next block, effectively hiding the read latency. Since we only need to read a block (64 bytes = 16 reads of 4 bytes at a time) and it takes around 67 cycles to process a block, the accelerator is practically never waiting for memory and is always doing work.
 
 The full implementation of SHA-256 using Versat is called VersatSHA. This function expects the entire input to be passed as an argument. 
 
-The last input block needs to be handled differently. Since SHA processes 64 bytes at a time, it employs a padding scheme to ensure that any number of blocks can be easily processed. This scheme basically always inserts a final block composed mostly of zeros except the last bytes, which contain information about the number of bytes processed.
+The last input block needs to be handled differently. Since SHA processes 64 bytes at a time, it employs a padding scheme to ensure that any number of blocks can be easily processed. This scheme always inserts a final block composed mostly of zeros except the last bytes, which contain information about the number of bytes processed.
 
 ## AES
 
-AES is a symmetric key cryptographic algorithm that performs encryption and decryption of blocks of data given a key of size 128, 196, or 256 bits, depending on the version being used. Our implementation is capable of handling 128 and 256-bit keys.
+AES is a symmetric key cryptographic algorithm that encrypts and decrypts blocks of data given a key of size 128, 196, or 256 bits, depending on the version being used. Our implementation is capable of handling 128- and 256-bit keys.
 
 AES defines the concept of rounds, which consist of a collection of steps that are performed repeatedly. A full AES implementation is usually divided into two parts: KeyExpansion and Encrypt/Decryption.
 
-The first part is called KeyExpansion and is responsible for expanding the initial key. Since the result of a key expansion is always the same for the same key, the key expansion only needs to be performed once per key used. 
+The first part, called KeyExpansion, expands the initial key. Since the result of a key expansion is always the same for the same key, the key expansion only needs to be performed once per key used. 
 
 While the expansion of the key could be performed entirely on software, we still implement it on the accelerator since it is a fraction of the runtime for significant inputs. Fully described using Versat, the logic to generate the key is contained inside the FullAES module, the GenericKeySchedule256 module, and its subunits. Function ExpandKey includes the code to expand a key. 
 
@@ -102,7 +106,7 @@ We accomplish this fully in Versat, by defining each round individually and then
 
 Because AES is a block cipher, we need to implement a block cipher mode to process inputs of variable size. Our implementation supports ECB, CBC and CTR modes. These modes can be seen on versat_aes.c. Some extra units must be inserted in the accelerator to support these modes.
 
-The Encrypt and Decrypt functions can be found inside versat_aes.c. Other than some logic related to the block cipher mode of operation, the software implementation basically only needs to select the correct key values to be used by the block cipher and change the merged instances when needed.
+The Encrypt and Decrypt functions can be found inside versat_aes.c. Other than some logic related to the block cipher mode of operation, the software implementation only needs to select the correct values of the key to be used by the block cipher and change the merged instances when required.
 
 A more thorough explanation of AES can be found at https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197.pdf.
 
@@ -112,13 +116,13 @@ The McEliece algorithm is an asymmetric form of encryption designed for a Key en
 
 McEliece is defined for various parameters that define the algorithm's strength. We only provided an implementation for the McEliece348864 parameter set.
 
-The part that took the majority of the time was a simple loop in the code that performed Gaussian elimination of a big bit matrix. We accelerate it by saving the current row being processed internally inside the accelerator and using VRead and VWrite units to load the other rows, process them with the current row, and store the result back into memory. The entire McEliece accelerator is described by the single unit called McEliece.
+The part that took the majority of the time was a simple loop in the code that performed Gaussian elimination of a big bit matrix. We accelerate it by saving the current row being processed internally inside the accelerator and using VRead and VWrite units to load the other rows, process them with the current row, and store the result in memory. The entire McEliece accelerator is described by the single unit called McEliece.
 
 More information about the algorithm, as well as the site where we obtained the KAT files, can be found [here](https://classic.mceliece.org/nist.html)
 
 ## Full implementation
 
-A unit called CryptoAlgos, which instantiates the SHA, AES, and McEliece units, describes the full implementation.
+The full implementation is described in a unit called CryptoAlgos, which instantiates the SHA, AES, and McEliece units.
 
 ## Tests
 
@@ -131,8 +135,7 @@ The IOb-SoC-OpenCryptoHW is licensed under the MIT License. See the LICENSE file
 
 # Acknowledgement
 This project is funded through the NGI Assure Fund, a fund established by NLnet
-with financial support from the European Commission's Next Generation Internet
-programme, under the aegis of DG Communications Networks, Content and Technology
+with financial support from the European Commission's Next Generation Internet programme, under the aegis of DG Communications Networks, Content and Technology
 under grant agreement No 957073.
 
 <table>
