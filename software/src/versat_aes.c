@@ -262,7 +262,7 @@ void FillInvMainRound(FullAESRoundsAddr addr){
 }
 
 /**
- * \brief Expands a key to 
+ * \brief Performs key expansion. One of the intial steps of AES where the given key is expanded into a number of round keys.
  * \param key buffer with the key. Must contain 16 bytes for 128 bit AES or 32 bytes for 256 bit AES
  * \param is256 wether we want AES-128 or AES-256
  */
@@ -341,7 +341,7 @@ void ExpandKey(uint8_t* key,bool is256){
  * \brief Generic AES encrypt function
  * \param data buffer to encrypt
  * \param result buffer to store result of encryption
- * \param lastAddition buffer that a block that is added last. Needed to implement CTR
+ * \param lastAddition buffer that contains a block to be added to output. Needed when doing CTR mode, otherwise pass NULL
  * \param is256 wether we want AES-128 or AES-256
  * \param isCBC true if doing CBC mode
  */
@@ -525,7 +525,7 @@ void InitAESDecryption(){
 }
 
 /**
- * \brief Loads initialization vector to inside the accelerator
+ * \brief Loads initialization vector to memory inside accelerator
  * \param iv buffer with the initialization vector. Must contain 16 bytes
  */
 void LoadIV(uint8_t* iv){
@@ -557,7 +557,9 @@ void AES_ECB256(uint8_t* key,uint8_t* plaintext,uint8_t* result){
 }
 
 /**
- * \brief AES encrypting using ECB mode
+ * Used by TestOneMode
+ * Intended to run tests
+ * \brief Test AES using ECB mode.
  * \param key buffer with the key. Must contain 16 bytes for 128 bit AES and 32 bytes for 256 bit AES.
  * \param data buffer to encrypt
  * \param encrypted buffer to store result of encryption
@@ -578,7 +580,8 @@ void ECB(uint8_t* key,uint8_t* data,uint8_t* encrypted,uint8_t* decrypted,bool i
 }
 
 /**
- * \brief AES encrypting using CBC mode
+ * Used by TestOneMode
+ * \brief Test AES using CBC mode
  * \param key buffer with the key. Must contain 16 bytes for 128 bit AES and 32 bytes for 256 bit AES.
  * \param iv initialization vector. Must contain 16 bytes
  * \param data buffer to encrypt
@@ -618,8 +621,9 @@ uint32_t Swap(uint32_t val){
 }
 
 /**
- * \brief AES encrypting using CTR mode
- * \param key buffer with the key. Must contain 16 bytes for 128 bit AES and 32 bytes for 256 bit AES.
+ * Used by TestOneMode
+ * \brief Test AES using CTR mode
+ * \param key buffer with the key. Must contain 16 bytes for 128 bit AES or 32 bytes for 256 bit AES.
  * \param counter buffer with the initial counter. Must contain 16 bytes
  * \param data buffer to encrypt
  * \param encrypted buffer to store encrypted result
